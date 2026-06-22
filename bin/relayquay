@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${RELAYQUAY_ENV_FILE:-/var/lib/plugroot/relayquay/relayquay.env}"
+
+usage() {
+  cat <<'USAGE'
+RelayQuay - RustDesk Web WSS gateway helper
+
+Usage:
+  relayquay init
+  relayquay doctor
+  relayquay up
+  relayquay down
+  relayquay logs
+  relayquay config
+  relayquay key
+
+Environment:
+  RELAYQUAY_ENV_FILE=/var/lib/plugroot/relayquay/relayquay.env
+USAGE
+}
+
+load_env() {
+  if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+  fi
+
+  RELAYQUAY_STATE_DIR="${RELAYQUAY_STATE_DIR:-/var/lib/plugroot/relayquay}"
+  RELAYQUAY_BIND="${RELAYQUAY_BIND:-127.0.0.1}"
+  RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
+  RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/plugroot/rustdesk/data}"
+  RUSTDESK_HBBS_WS_UPSTREAM="${RUSTDESK_HBBS_WS_UPSTREAM:-127.0.0.1:21118}"
+  RUSTDESK_HBBR_WS_UPSTREAM="${RUSTDESK_HBBR_WS_UPSTREAM:-127.0.0.1:21119}"
+}
+
+compose() {
+  docker compose \
+    --env-file "$ENV_FILE" \
+    --project-directory "$ROOT_DIR" \
+    -f "$ROOT_DIR/compose.yaml" \
+    "$@"
+}
+
+cmd_init() {
+  local state_owner="${RELAYQUAY_STATE_OWNER:-${SUDO_USER:-${USER}}}"
+  local state_group="${RELAYQUAY_STATE_GROUP:-$(id -gn "$state_owner")}"
+
+  sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$(dirname "$ENV_FILE")"
+  if [[ ! -f "$ENV_FILE" ]]; then
+    sudo install -o "$state_owner" -g "$state_group" -m 600 "$ROOT_DIR/.env.example" "$ENV_FILE"
+    echo "created $ENV_FILE"
+  else
+    sudo chown "$state_owner:$state_group" "$ENV_FILE"
+    sudo chmod 600 "$ENV_FILE"
+    echo "kept existing $ENV_FILE"
+  fi
+
+  load_env
+  sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$RELAYQUAY_STATE_DIR"
+  sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$RELAYQUAY_STATE_DIR/caddy"
+}
+
+cmd_doctor() {
+  load_env
+  local failed=0
+
+  if command -v docker >/dev/null 2>&1; then
+    echo "ok: docker is installed"
+  else
+    echo "error: docker is not installed"
+    failed=1
+  fi
+
+  if [[ -f "$ENV_FILE" ]]; then
+    echo "ok: private env file exists at $ENV_FILE"
+  else
+    echo "warn: private env file is missing; run ./bin/relayquay init"
+  fi
+
+  if [[ "${CLOUDFLARE_TUNNEL_TOKEN:-}" == "" || "${CLOUDFLARE_TUNNEL_TOKEN:-}" == "<your-cloudflare-tunnel-token>" ]]; then
+    echo "warn: CLOUDFLARE_TUNNEL_TOKEN is not set in the private env file"
+  else
+    echo "ok: Cloudflare tunnel token is set"
+  fi
+
+  if [[ "${RELAYQUAY_PUBLIC_HOST:-}" == "" || "${RELAYQUAY_PUBLIC_HOST:-}" == "rustdesk-wss.example.com" ]]; then
+    echo "warn: RELAYQUAY_PUBLIC_HOST is still a placeholder"
+  else
+    echo "ok: public hostname is configured"
+  fi
+
+  check_tcp_upstream "$RUSTDESK_HBBS_WS_UPSTREAM" "hbbs WebSocket"
+  check_tcp_upstream "$RUSTDESK_HBBR_WS_UPSTREAM" "hbbr WebSocket"
+  check_raw_rustdesk_listeners
+
+  if curl -fsS "http://${RELAYQUAY_BIND}:${RELAYQUAY_LISTEN_PORT}/healthz" >/dev/null 2>&1; then
+    echo "ok: local gateway health endpoint is responding"
+  else
+    echo "warn: local gateway is not responding yet"
+  fi
+
+  return "$failed"
+}
+
+check_tcp_upstream() {
+  local upstream="$1"
+  local label="$2"
+  local host="${upstream%:*}"
+  local port="${upstream##*:}"
+
+  if timeout 2 bash -c ":</dev/tcp/${host}/${port}" >/dev/null 2>&1; then
+    echo "ok: $label upstream reachable at $upstream"
+  else
+    echo "warn: $label upstream not reachable at $upstream"
+  fi
+}
+
+check_raw_rustdesk_listeners() {
+  if ! command -v ss >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local wildcard
+  wildcard="$(ss -ltnuH 2>/dev/null | awk '$5 ~ /:(21115|21116|21117|21118|21119)$/ && $5 !~ /^(127\.0\.0\.1|\[::1\])/{print $1, $5}' || true)"
+  if [[ -n "$wildcard" ]]; then
+    echo "warn: raw RustDesk ports are listening beyond loopback:"
+    echo "$wildcard" | sed 's/^/  /'
+    echo "warn: restrict these with a host firewall unless they are private-network only"
+  else
+    echo "ok: no wildcard raw RustDesk listeners detected"
+  fi
+}
+
+cmd_key() {
+  load_env
+  local key_path="$RUSTDESK_DATA_DIR/id_ed25519.pub"
+  if [[ ! -r "$key_path" ]]; then
+    key_path="$RELAYQUAY_STATE_DIR/rustdesk/id_ed25519.pub"
+  fi
+  if [[ -r "$key_path" ]]; then
+    cat "$key_path"
+  else
+    echo "RustDesk public key not found. Start hbbs once, then check $RUSTDESK_DATA_DIR/id_ed25519.pub" >&2
+    return 1
+  fi
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+  init)
+    cmd_init
+    ;;
+  doctor)
+    cmd_doctor
+    ;;
+  up)
+    load_env
+    compose up -d
+    ;;
+  down)
+    load_env
+    compose down
+    ;;
+  logs)
+    load_env
+    compose logs -f --tail=200
+    ;;
+  config)
+    load_env
+    compose config
+    ;;
+  key)
+    cmd_key
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
