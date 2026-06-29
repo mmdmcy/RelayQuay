@@ -1,11 +1,11 @@
-# Copy this into /var/lib/plugroot/plugroot.local.toml and adjust locally.
-# Do not put real domains or tunnel tokens in the Plugroot checkout.
+# Copy this into your private Plugroot local config and adjust locally.
+# Do not put real domains, paths, or tunnel tokens in this public checkout.
 #
 # For Plugroot-hosted installs, set:
-#   RELAYQUAY_ENV_FILE=/var/lib/plugroot/relayquay/relayquay.env
+#   RELAYQUAY_ENV_FILE=<private-state-root>/relayquay/relayquay.env
 # and copy .env.example there with host-specific values, including:
-#   RELAYQUAY_STATE_DIR=/var/lib/plugroot/relayquay
-#   RUSTDESK_DATA_DIR=/var/lib/plugroot/rustdesk/data
+#   RELAYQUAY_STATE_DIR=<private-state-root>/relayquay
+#   RUSTDESK_DATA_DIR=<private-state-root>/rustdesk/data
 
 [[service]]
 id = "relayquay"
@@ -13,8 +13,8 @@ name = "RelayQuay RustDesk Web Gateway"
 plane = "public-authenticated"
 category = "remote-access"
 kind = "compose"
-path = "/opt/plugroot/relayquay"
-env_file = "${PLUGROOT_STATE_ROOT:-/var/lib/plugroot}/relayquay/relayquay.env"
+path = "<plugroot-service-root>/relayquay"
+env_file = "<private-state-root>/relayquay/relayquay.env"
 url = "https://rustdesk-wss.example.com/healthz"
 access = "Cloudflare Access allowlist"
 description = "Access-protected WSS gateway for RustDesk Web."

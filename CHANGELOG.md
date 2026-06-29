@@ -9,3 +9,4 @@ All notable changes to RelayQuay are recorded here.
 - Added formal project docs and metered-network guidance.
 - Added infrastructure, operations, ADR, and Terraform reference docs.
 - Moved runtime deployment files under `deploy/`.
+- Hardened public ignore rules and genericized Plugroot integration examples.

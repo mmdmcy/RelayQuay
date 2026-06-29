@@ -1,6 +1,10 @@
 .env
 .env.*
 !.env.example
+AGENTS.md
+.codex/
+.claude/
+docs/private/
 state/
 runtime/
 webclient/
@@ -12,7 +16,14 @@ private/
 !*.tfvars.example
 *.log
 *.pid
+*.db
+*.sqlite
 *.sqlite3
 *.sqlite3-*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 id_ed25519
 id_ed25519.pub

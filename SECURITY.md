@@ -13,8 +13,8 @@ RelayQuay is designed to be public source code with private runtime state.
   settings.
 
 Use `.env.example` and `rustdesk-wss.example.com` style placeholders in public
-files. Keep real values in `/var/lib/relayquay/relayquay.env`, or another
-private file selected with `RELAYQUAY_ENV_FILE`.
+files. Keep real values in a private env file selected with
+`RELAYQUAY_ENV_FILE`.
 
 ## Expected Exposure
 

@@ -133,12 +133,12 @@ configured to use that hostname for both ID and relay where the UI supports it.
 
 ## Plugroot
 
-RelayQuay is standalone. If you also use Plugroot, you can keep a code-only copy
-inside `/opt/plugroot/relayquay` and register it with a private local overlay
-based on
+RelayQuay is standalone. If you also use a host orchestrator such as Plugroot,
+keep this repository as a code-only checkout and register it with private local
+configuration based on
 [examples/plugroot/plugroot.local.example.toml](examples/plugroot/plugroot.local.example.toml).
-In the private Plugroot env file, set `RELAYQUAY_STATE_DIR` and
-`RUSTDESK_DATA_DIR` to the host-specific state paths you actually use.
+In the private env file, set `RELAYQUAY_STATE_DIR` and `RUSTDESK_DATA_DIR` to
+the host-specific state paths you actually use.
 
 Do not put real tunnel tokens, private hostnames, or local-only notes in this
 checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.
