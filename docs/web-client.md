@@ -14,6 +14,7 @@ Set these values in the private env file:
 
 ```bash
 RELAYQUAY_WEBCLIENT=1
+RELAYQUAY_WEBCLIENT_PATH=/sky
 RUSTDESK_WEB_ROOT=/var/lib/relayquay/webclient
 ```
 
@@ -36,7 +37,8 @@ Then validate and start RelayQuay:
 
 With `RELAYQUAY_WEBCLIENT=1`, Caddy uses the web-client overlay:
 
-- `/` serves the supplied static web client.
+- `RELAYQUAY_WEBCLIENT_PATH` serves the supplied static web client. The default
+  is `/sky`, so the browser URL is usually `https://<your-host>/sky/`.
 - `/healthz` and `/.well-known/relayquay` return the RelayQuay health response.
 - `/ws/id` proxies to `hbbs` WebSocket.
 - `/ws/relay` proxies to `hbbr` WebSocket.
@@ -47,6 +49,8 @@ listener, normally `http://127.0.0.1:8788`.
 ## Security Notes
 
 - Keep Cloudflare Access enabled for the hostname.
+- If the web build uses absolute asset URLs, build it for the same base path as
+  `RELAYQUAY_WEBCLIENT_PATH`, or set the path to the build's expected base.
 - Do not commit web-client build output if it contains private hostnames,
   deployment-specific settings, or generated credentials.
 - Update the supplied web assets from a source you trust.

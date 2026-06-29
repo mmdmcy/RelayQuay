@@ -35,6 +35,12 @@ load_env() {
   RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
   RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/relayquay/rustdesk}"
   RELAYQUAY_WEBCLIENT="${RELAYQUAY_WEBCLIENT:-0}"
+  RELAYQUAY_WEBCLIENT_PATH="${RELAYQUAY_WEBCLIENT_PATH:-/sky}"
+  if [[ "$RELAYQUAY_WEBCLIENT_PATH" != "/" ]]; then
+    RELAYQUAY_WEBCLIENT_PATH="/${RELAYQUAY_WEBCLIENT_PATH#/}"
+    RELAYQUAY_WEBCLIENT_PATH="${RELAYQUAY_WEBCLIENT_PATH%/}"
+  fi
+  export RELAYQUAY_WEBCLIENT_PATH
   RUSTDESK_WEB_ROOT="${RUSTDESK_WEB_ROOT:-$RELAYQUAY_STATE_DIR/webclient}"
   RUSTDESK_HBBS_WS_UPSTREAM="${RUSTDESK_HBBS_WS_UPSTREAM:-127.0.0.1:21118}"
   RUSTDESK_HBBR_WS_UPSTREAM="${RUSTDESK_HBBR_WS_UPSTREAM:-127.0.0.1:21119}"
@@ -127,6 +133,7 @@ check_webclient_assets() {
     1|true|yes|on)
       if [[ -r "$RUSTDESK_WEB_ROOT/index.html" ]]; then
         echo "ok: optional web client assets found at $RUSTDESK_WEB_ROOT"
+        echo "ok: optional web client path is $RELAYQUAY_WEBCLIENT_PATH"
       else
         echo "warn: RELAYQUAY_WEBCLIENT is enabled but $RUSTDESK_WEB_ROOT/index.html is missing"
       fi

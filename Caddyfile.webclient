@@ -35,9 +35,14 @@ http://{$RELAYQUAY_BIND:127.0.0.1}:{$RELAYQUAY_LISTEN_PORT:8788} {
 		}
 	}
 
-	handle {
+	@webclientBase path {$RELAYQUAY_WEBCLIENT_PATH:/sky}
+	redir @webclientBase {$RELAYQUAY_WEBCLIENT_PATH:/sky}/ 308
+
+	handle_path {$RELAYQUAY_WEBCLIENT_PATH:/sky}/* {
 		root * /srv/rustdesk-web
 		try_files {path} {path}/ /index.html
 		file_server
 	}
+
+	respond "not found" 404
 }

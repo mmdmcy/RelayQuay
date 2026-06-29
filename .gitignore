@@ -4,6 +4,7 @@
 state/
 runtime/
 webclient/
+private/
 *.log
 *.pid
 *.sqlite3

@@ -86,12 +86,13 @@ Access-protected domain. This is opt-in and uses web assets you provide:
 
 ```bash
 RELAYQUAY_WEBCLIENT=1
+RELAYQUAY_WEBCLIENT_PATH=/sky
 RUSTDESK_WEB_ROOT=/var/lib/relayquay/webclient
 ```
 
-When enabled, `/` serves the static web client while `/ws/id` and `/ws/relay`
-continue to proxy RustDesk WebSocket traffic. RelayQuay intentionally does not
-bundle or fetch RustDesk's hosted web app. See
+When enabled, `/sky/` serves the static web client while `/ws/id` and
+`/ws/relay` continue to proxy RustDesk WebSocket traffic. RelayQuay
+intentionally does not bundle or fetch RustDesk's hosted web app. See
 [docs/web-client.md](docs/web-client.md).
 
 ## Security Defaults
