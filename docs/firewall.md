@@ -8,7 +8,7 @@ The intended policy is:
 - Allow outbound `cloudflared` traffic to Cloudflare.
 - Allow loopback access to the Caddy gateway on `127.0.0.1:8788`.
 - Allow RustDesk raw ports only from private networks you trust.
-- Deny public access to `21115-21119/tcp` and `21116/udp`.
+- Deny public access to `21115-21119/tcp` and `21115-21119/udp`.
 
 ## RustDesk Ports
 
@@ -31,7 +31,7 @@ sudo ufw allow from 192.168.0.0/16 to any port 21115:21119 proto tcp
 sudo ufw allow from 192.168.0.0/16 to any port 21116 proto udp
 
 sudo ufw deny 21115:21119/tcp
-sudo ufw deny 21116/udp
+sudo ufw deny 21115:21119/udp
 ```
 
 ## nftables Example

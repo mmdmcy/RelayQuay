@@ -3,7 +3,7 @@ name: relayquay
 services:
   caddy:
     image: caddy:${CADDY_TAG:-2-alpine}
-    restart: unless-stopped
+    restart: ${RELAYQUAY_RESTART_POLICY:-unless-stopped}
     network_mode: host
     environment:
       RELAYQUAY_BIND: ${RELAYQUAY_BIND:-127.0.0.1}
@@ -16,9 +16,9 @@ services:
       - ${RELAYQUAY_STATE_DIR:-./state}/caddy:/data
 
   cloudflared:
-    image: cloudflare/cloudflared:${CLOUDFLARED_TAG:-latest}
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in the private env file}
+    image: cloudflare/cloudflared:${CLOUDFLARED_TAG:-2026.6.1}
+    restart: ${RELAYQUAY_RESTART_POLICY:-unless-stopped}
+    command: tunnel --no-autoupdate --protocol ${CLOUDFLARED_PROTOCOL:-quic} run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in the private env file}
     depends_on:
       - caddy
 
@@ -26,7 +26,7 @@ services:
     profiles:
       - server
     image: rustdesk/rustdesk-server:${RUSTDESK_SERVER_TAG:-latest}
-    restart: unless-stopped
+    restart: ${RELAYQUAY_RESTART_POLICY:-unless-stopped}
     command: ${RUSTDESK_HBBS_COMMAND:-hbbs}
     volumes:
       - ${RELAYQUAY_STATE_DIR:-./state}/rustdesk:/root
@@ -38,7 +38,7 @@ services:
     profiles:
       - server
     image: rustdesk/rustdesk-server:${RUSTDESK_SERVER_TAG:-latest}
-    restart: unless-stopped
+    restart: ${RELAYQUAY_RESTART_POLICY:-unless-stopped}
     command: ${RUSTDESK_HBBR_COMMAND:-hbbr}
     volumes:
       - ${RELAYQUAY_STATE_DIR:-./state}/rustdesk:/root

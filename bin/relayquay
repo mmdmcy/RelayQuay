@@ -11,9 +11,11 @@ RelayQuay - RustDesk Web WSS gateway helper
 Usage:
   relayquay init
   relayquay doctor
-  relayquay up
+  relayquay up [service...]
   relayquay down
-  relayquay logs
+  relayquay stop [service...]
+  relayquay status
+  relayquay logs [service...]
   relayquay config
   relayquay key
 
@@ -33,6 +35,8 @@ load_env() {
   RELAYQUAY_STATE_DIR="${RELAYQUAY_STATE_DIR:-/var/lib/relayquay}"
   RELAYQUAY_BIND="${RELAYQUAY_BIND:-127.0.0.1}"
   RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
+  RELAYQUAY_RESTART_POLICY="${RELAYQUAY_RESTART_POLICY:-unless-stopped}"
+  CLOUDFLARED_PROTOCOL="${CLOUDFLARED_PROTOCOL:-quic}"
   RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/relayquay/rustdesk}"
   RELAYQUAY_WEBCLIENT="${RELAYQUAY_WEBCLIENT:-0}"
   RELAYQUAY_WEBCLIENT_PATH="${RELAYQUAY_WEBCLIENT_PATH:-/sky}"
@@ -194,15 +198,26 @@ case "$cmd" in
     ;;
   up)
     load_env
-    compose up -d
+    shift
+    compose up -d "$@"
     ;;
   down)
     load_env
     compose down
     ;;
+  stop)
+    load_env
+    shift
+    compose stop "$@"
+    ;;
+  status|ps)
+    load_env
+    compose ps
+    ;;
   logs)
     load_env
-    compose logs -f --tail=200
+    shift
+    compose logs -f --tail=200 "$@"
     ;;
   config)
     load_env

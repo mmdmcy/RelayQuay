@@ -106,6 +106,20 @@ intentionally does not bundle or fetch RustDesk's hosted web app. See
   networks deliberately.
 - The helper script refuses to print Cloudflare secrets.
 
+## Network Usage
+
+RelayQuay is quiet while idle. The main bandwidth cost is an active RustDesk
+desktop session, not the gateway itself. For metered Wi-Fi, keep Cloudflare
+Access enabled, stop the tunnel when you do not need browser access, and lower
+RustDesk quality/frame-rate settings during long sessions.
+
+```bash
+./bin/relayquay stop cloudflared
+./bin/relayquay up cloudflared
+```
+
+See [docs/network-usage.md](docs/network-usage.md).
+
 ## Browser Relay Note
 
 If an existing `hbbs` advertises a relay address that only works on a private
@@ -125,3 +139,11 @@ In the private Plugroot env file, set `RELAYQUAY_STATE_DIR` and
 
 Do not put real tunnel tokens, private hostnames, or local-only notes in this
 checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.
+
+## Project Docs
+
+- [Architecture](docs/architecture.md)
+- [Cloudflare Access](docs/cloudflare-access.md)
+- [Firewall](docs/firewall.md)
+- [Network Usage](docs/network-usage.md)
+- [Threat Model](docs/threat-model.md)
