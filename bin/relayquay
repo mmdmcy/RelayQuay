@@ -34,15 +34,24 @@ load_env() {
   RELAYQUAY_BIND="${RELAYQUAY_BIND:-127.0.0.1}"
   RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
   RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/relayquay/rustdesk}"
+  RELAYQUAY_WEBCLIENT="${RELAYQUAY_WEBCLIENT:-0}"
+  RUSTDESK_WEB_ROOT="${RUSTDESK_WEB_ROOT:-$RELAYQUAY_STATE_DIR/webclient}"
   RUSTDESK_HBBS_WS_UPSTREAM="${RUSTDESK_HBBS_WS_UPSTREAM:-127.0.0.1:21118}"
   RUSTDESK_HBBR_WS_UPSTREAM="${RUSTDESK_HBBR_WS_UPSTREAM:-127.0.0.1:21119}"
 }
 
 compose() {
+  local compose_files=(-f "$ROOT_DIR/compose.yaml")
+  case "${RELAYQUAY_WEBCLIENT,,}" in
+    1|true|yes|on)
+      compose_files+=(-f "$ROOT_DIR/compose.webclient.yaml")
+      ;;
+  esac
+
   docker compose \
     --env-file "$ENV_FILE" \
     --project-directory "$ROOT_DIR" \
-    -f "$ROOT_DIR/compose.yaml" \
+    "${compose_files[@]}" \
     "$@"
 }
 
@@ -63,6 +72,11 @@ cmd_init() {
   load_env
   sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$RELAYQUAY_STATE_DIR"
   sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$RELAYQUAY_STATE_DIR/caddy"
+  case "${RELAYQUAY_WEBCLIENT,,}" in
+    1|true|yes|on)
+      sudo install -d -o "$state_owner" -g "$state_group" -m 755 "$RUSTDESK_WEB_ROOT"
+      ;;
+  esac
 }
 
 cmd_doctor() {
@@ -96,6 +110,7 @@ cmd_doctor() {
 
   check_tcp_upstream "$RUSTDESK_HBBS_WS_UPSTREAM" "hbbs WebSocket"
   check_tcp_upstream "$RUSTDESK_HBBR_WS_UPSTREAM" "hbbr WebSocket"
+  check_webclient_assets
   check_raw_rustdesk_listeners
 
   if curl -fsS "http://${RELAYQUAY_BIND}:${RELAYQUAY_LISTEN_PORT}/healthz" >/dev/null 2>&1; then
@@ -105,6 +120,18 @@ cmd_doctor() {
   fi
 
   return "$failed"
+}
+
+check_webclient_assets() {
+  case "${RELAYQUAY_WEBCLIENT,,}" in
+    1|true|yes|on)
+      if [[ -r "$RUSTDESK_WEB_ROOT/index.html" ]]; then
+        echo "ok: optional web client assets found at $RUSTDESK_WEB_ROOT"
+      else
+        echo "warn: RELAYQUAY_WEBCLIENT is enabled but $RUSTDESK_WEB_ROOT/index.html is missing"
+      fi
+      ;;
+  esac
 }
 
 check_tcp_upstream() {

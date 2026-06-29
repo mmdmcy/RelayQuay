@@ -9,6 +9,8 @@ RelayQuay is designed to be public source code with private runtime state.
 - RustDesk private keys or server databases.
 - Real `.env` files.
 - Local firewall state, service logs, media, backups, or machine notes.
+- Web-client build output that contains private hostnames or deployment-specific
+  settings.
 
 Use `.env.example` and `rustdesk-wss.example.com` style placeholders in public
 files. Keep real values in `/var/lib/relayquay/relayquay.env`, or another

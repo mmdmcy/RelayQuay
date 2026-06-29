@@ -3,6 +3,7 @@
 !.env.example
 state/
 runtime/
+webclient/
 *.log
 *.pid
 *.sqlite3

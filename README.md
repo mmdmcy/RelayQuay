@@ -79,10 +79,26 @@ COMPOSE_PROFILES=server ./bin/relayquay up
 See [docs/cloudflare-access.md](docs/cloudflare-access.md) and
 [docs/rustdesk-web.md](docs/rustdesk-web.md) for the details and caveats.
 
+## Optional Own-Domain Web Client
+
+RelayQuay can also serve a self-hosted RustDesk web client from your own
+Access-protected domain. This is opt-in and uses web assets you provide:
+
+```bash
+RELAYQUAY_WEBCLIENT=1
+RUSTDESK_WEB_ROOT=/var/lib/relayquay/webclient
+```
+
+When enabled, `/` serves the static web client while `/ws/id` and `/ws/relay`
+continue to proxy RustDesk WebSocket traffic. RelayQuay intentionally does not
+bundle or fetch RustDesk's hosted web app. See
+[docs/web-client.md](docs/web-client.md).
+
 ## Security Defaults
 
 - No Cloudflare token is committed.
 - No real hostname is committed.
+- Optional web-client assets are private operator-supplied files.
 - The gateway binds to `127.0.0.1:8788`.
 - The RustDesk server profile uses Docker host networking only when you opt in.
 - Firewall examples deny public access to `21115-21119` and allow private

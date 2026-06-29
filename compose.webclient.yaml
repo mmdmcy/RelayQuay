@@ -1,0 +1,6 @@
+services:
+  caddy:
+    volumes:
+      - ./Caddyfile.webclient:/etc/caddy/Caddyfile:ro
+      - ${RELAYQUAY_STATE_DIR:-./state}/caddy:/data
+      - ${RUSTDESK_WEB_ROOT:-./webclient}:/srv/rustdesk-web:ro
