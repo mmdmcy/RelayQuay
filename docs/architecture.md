@@ -27,3 +27,8 @@ Private state belongs outside the repository, normally under
 
 That includes tunnel tokens, real hostnames, RustDesk keys, generated web-client
 assets, logs, databases, and host-specific firewall notes.
+
+## Decisions
+
+- [0001: Cloudflare Access and Tunnel](adr/0001-cloudflare-access-and-tunnel.md)
+- [0002: Subdomain With Optional Path Redirect](adr/0002-subdomain-with-optional-path-redirect.md)

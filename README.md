@@ -145,5 +145,8 @@ checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.
 - [Architecture](docs/architecture.md)
 - [Cloudflare Access](docs/cloudflare-access.md)
 - [Firewall](docs/firewall.md)
+- [Infrastructure](docs/infrastructure.md)
 - [Network Usage](docs/network-usage.md)
+- [Operations](docs/operations.md)
+- [Repository Layout](docs/repository-layout.md)
 - [Threat Model](docs/threat-model.md)

@@ -5,6 +5,11 @@ state/
 runtime/
 webclient/
 private/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
 *.log
 *.pid
 *.sqlite3

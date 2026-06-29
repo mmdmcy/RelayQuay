@@ -25,3 +25,14 @@ jobs:
           cp .env.example /tmp/relayquay.env
           sed -i 's/^RELAYQUAY_WEBCLIENT=.*/RELAYQUAY_WEBCLIENT=1/' /tmp/relayquay.env
           RELAYQUAY_ENV_FILE=/tmp/relayquay.env ./bin/relayquay config >/tmp/relayquay-webclient-compose.yaml
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infra/cloudflare/terraform
+
+      - name: Validate Terraform reference
+        working-directory: infra/cloudflare/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate

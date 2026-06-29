@@ -1,0 +1,10 @@
+cloudflare_account_id = "00000000000000000000000000000000"
+cloudflare_zone_id    = "00000000000000000000000000000000"
+tunnel_id             = "00000000-0000-0000-0000-000000000000"
+
+public_hostname = "rustdesk-wss.example.com"
+origin_service  = "http://localhost:8788"
+
+allowed_emails = [
+  "operator@example.com",
+]
