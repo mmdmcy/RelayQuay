@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${RELAYQUAY_ENV_FILE:-/var/lib/relayquay/relayquay.env}"
+COMPOSE_DIR="$ROOT_DIR/deploy/compose"
 
 usage() {
   cat <<'USAGE'
@@ -51,10 +52,10 @@ load_env() {
 }
 
 compose() {
-  local compose_files=(-f "$ROOT_DIR/compose.yaml")
+  local compose_files=(-f "$COMPOSE_DIR/compose.yaml")
   case "${RELAYQUAY_WEBCLIENT,,}" in
     1|true|yes|on)
-      compose_files+=(-f "$ROOT_DIR/compose.webclient.yaml")
+      compose_files+=(-f "$COMPOSE_DIR/webclient.yaml")
       ;;
   esac
 

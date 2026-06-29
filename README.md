@@ -34,6 +34,9 @@ RelayQuay gives you an open-source, repeatable way to publish only:
 Everything sensitive stays outside the repo, normally under
 `/var/lib/relayquay`.
 
+Runtime files are grouped under `deploy/`; day-to-day operation goes through
+`./bin/relayquay`.
+
 ## Quick Start
 
 Create private state and an env file:

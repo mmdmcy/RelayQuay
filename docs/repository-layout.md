@@ -3,14 +3,12 @@
 ```text
 .
 ├── bin/                    Helper CLI
+├── deploy/                 Runtime Compose and Caddy files
 ├── docs/                   Architecture, operations, and security docs
 ├── docs/adr/               Architecture decision records
 ├── examples/               Firewall and host integration examples
 ├── infra/                  Reference infrastructure-as-code
-├── Caddyfile               Default WSS gateway
-├── Caddyfile.webclient     Optional static web-client gateway
-├── compose.yaml            Core services
-└── compose.webclient.yaml  Optional web-client overlay
+└── .env.example            Sanitized private env template
 ```
 
 ## Public Source

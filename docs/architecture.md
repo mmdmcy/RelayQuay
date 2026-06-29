@@ -19,6 +19,8 @@ browser
 - Optional static web assets can be served from `RELAYQUAY_WEBCLIENT_PATH`.
 - RustDesk raw ports remain private to loopback, VPN, LAN, or explicit firewall
   allowlists.
+- Deployment files live under `deploy/` so runtime configuration is separated
+  from docs, examples, and infrastructure templates.
 
 ## Runtime State
 

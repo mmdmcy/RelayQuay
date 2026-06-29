@@ -12,7 +12,7 @@ services:
       RUSTDESK_HBBS_WS_UPSTREAM: ${RUSTDESK_HBBS_WS_UPSTREAM:-127.0.0.1:21118}
       RUSTDESK_HBBR_WS_UPSTREAM: ${RUSTDESK_HBBR_WS_UPSTREAM:-127.0.0.1:21119}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${RELAYQUAY_STATE_DIR:-./state}/caddy:/data
 
   cloudflared:
