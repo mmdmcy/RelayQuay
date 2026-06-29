@@ -1,5 +1,11 @@
 # Copy this into /var/lib/plugroot/plugroot.local.toml and adjust locally.
 # Do not put real domains or tunnel tokens in the Plugroot checkout.
+#
+# For Plugroot-hosted installs, set:
+#   RELAYQUAY_ENV_FILE=/var/lib/plugroot/relayquay/relayquay.env
+# and copy .env.example there with host-specific values, including:
+#   RELAYQUAY_STATE_DIR=/var/lib/plugroot/relayquay
+#   RUSTDESK_DATA_DIR=/var/lib/plugroot/rustdesk/data
 
 [[service]]
 id = "relayquay"

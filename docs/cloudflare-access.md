@@ -15,7 +15,8 @@ Service:  http://127.0.0.1:8788
 ```
 
 The compose file uses a tunnel token through `CLOUDFLARE_TUNNEL_TOKEN`. Keep
-that token only in `/var/lib/plugroot/relayquay/relayquay.env`.
+that token only in `/var/lib/relayquay/relayquay.env`, or in another private
+env file selected with `RELAYQUAY_ENV_FILE`.
 
 ## Access Application
 

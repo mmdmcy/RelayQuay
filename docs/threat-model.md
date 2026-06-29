@@ -9,7 +9,7 @@ not on your private VPN.
   WebSocket Secure.
 - Require identity authentication before any browser can reach the WSS gateway.
 - Avoid public exposure of RustDesk's raw TCP/UDP ports.
-- Keep real operational state under `/var/lib/plugroot`, outside Git.
+- Keep real operational state under `/var/lib/relayquay`, outside Git.
 
 ## Non-Goals
 

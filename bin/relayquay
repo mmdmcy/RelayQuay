@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${RELAYQUAY_ENV_FILE:-/var/lib/plugroot/relayquay/relayquay.env}"
+ENV_FILE="${RELAYQUAY_ENV_FILE:-/var/lib/relayquay/relayquay.env}"
 
 usage() {
   cat <<'USAGE'
@@ -18,7 +18,7 @@ Usage:
   relayquay key
 
 Environment:
-  RELAYQUAY_ENV_FILE=/var/lib/plugroot/relayquay/relayquay.env
+  RELAYQUAY_ENV_FILE=/var/lib/relayquay/relayquay.env
 USAGE
 }
 
@@ -30,10 +30,10 @@ load_env() {
     set +a
   fi
 
-  RELAYQUAY_STATE_DIR="${RELAYQUAY_STATE_DIR:-/var/lib/plugroot/relayquay}"
+  RELAYQUAY_STATE_DIR="${RELAYQUAY_STATE_DIR:-/var/lib/relayquay}"
   RELAYQUAY_BIND="${RELAYQUAY_BIND:-127.0.0.1}"
   RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
-  RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/plugroot/rustdesk/data}"
+  RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/relayquay/rustdesk}"
   RUSTDESK_HBBS_WS_UPSTREAM="${RUSTDESK_HBBS_WS_UPSTREAM:-127.0.0.1:21118}"
   RUSTDESK_HBBR_WS_UPSTREAM="${RUSTDESK_HBBR_WS_UPSTREAM:-127.0.0.1:21119}"
 }

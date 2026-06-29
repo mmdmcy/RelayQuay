@@ -31,22 +31,23 @@ RelayQuay gives you an open-source, repeatable way to publish only:
 - `https://rustdesk-wss.example.com/ws/relay`
 - `https://rustdesk-wss.example.com/healthz`
 
-Everything sensitive stays outside the repo in `/var/lib/plugroot/relayquay`.
+Everything sensitive stays outside the repo, normally under
+`/var/lib/relayquay`.
 
 ## Quick Start
 
 Create private state and an env file:
 
 ```bash
-sudo install -d -m 700 /var/lib/plugroot/relayquay
-install -m 600 .env.example /var/lib/plugroot/relayquay/relayquay.env
+./bin/relayquay init
 ```
 
-Edit `/var/lib/plugroot/relayquay/relayquay.env` and set:
+Edit `/var/lib/relayquay/relayquay.env` and set:
 
 - `RELAYQUAY_PUBLIC_HOST`
 - `CLOUDFLARE_TUNNEL_TOKEN`
-- `RUSTDESK_DATA_DIR` if your current RustDesk data lives somewhere else
+- `RUSTDESK_DATA_DIR` if an existing RustDesk server stores its public key
+  somewhere else
 
 Start only the WSS gateway:
 
@@ -88,19 +89,22 @@ See [docs/cloudflare-access.md](docs/cloudflare-access.md) and
   networks deliberately.
 - The helper script refuses to print Cloudflare secrets.
 
-## Current Host Note
+## Browser Relay Note
 
-If you already run `hbbs` with a relay address that only works on Tailscale or
-LAN, the RustDesk Web session may signal successfully and then time out during
-relay setup. For browser use, the relay address visible to the web client must
-also be reachable through the WSS hostname, or the web client must be configured
-to use that hostname for both ID and relay where the UI supports it.
+If an existing `hbbs` advertises a relay address that only works on a private
+network, the RustDesk Web session may signal successfully and then time out
+during relay setup. For browser use, the relay address visible to the web client
+must also be reachable through the WSS hostname, or the web client must be
+configured to use that hostname for both ID and relay where the UI supports it.
 
 ## Plugroot
 
-RelayQuay is code-only inside `/opt/plugroot/relayquay`. Register it in
-Plugroot with a private local overlay based on
+RelayQuay is standalone. If you also use Plugroot, you can keep a code-only copy
+inside `/opt/plugroot/relayquay` and register it with a private local overlay
+based on
 [examples/plugroot/plugroot.local.example.toml](examples/plugroot/plugroot.local.example.toml).
+In the private Plugroot env file, set `RELAYQUAY_STATE_DIR` and
+`RUSTDESK_DATA_DIR` to the host-specific state paths you actually use.
 
 Do not put real tunnel tokens, private hostnames, or local-only notes in this
-checkout.
+checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.

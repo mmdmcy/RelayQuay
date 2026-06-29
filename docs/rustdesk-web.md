@@ -18,6 +18,10 @@ RUSTDESK_HBBS_WS_UPSTREAM=127.0.0.1:21118
 RUSTDESK_HBBR_WS_UPSTREAM=127.0.0.1:21119
 ```
 
+If your existing RustDesk public key lives outside RelayQuay's state directory,
+set `RUSTDESK_DATA_DIR` in the private env file before running `./bin/relayquay
+key`.
+
 Then run:
 
 ```bash

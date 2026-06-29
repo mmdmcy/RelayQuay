@@ -1,4 +1,4 @@
-ENV_FILE ?= /var/lib/plugroot/relayquay/relayquay.env
+ENV_FILE ?= /var/lib/relayquay/relayquay.env
 
 .PHONY: init doctor up down logs config key
 
