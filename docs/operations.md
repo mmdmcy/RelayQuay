@@ -30,6 +30,10 @@ Unauthenticated requests should redirect to Cloudflare Access:
 curl -I https://rustdesk-wss.example.com/healthz
 ```
 
+If Cloudflare returns `502 Bad Gateway` after Access login, check that the
+tunnel ingress uses `http://127.0.0.1:8788` and that the `cloudflared` container
+is running with host networking.
+
 The local gateway should respond directly on loopback:
 
 ```bash

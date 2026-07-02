@@ -24,7 +24,7 @@ variable "public_hostname" {
 variable "origin_service" {
   description = "Origin service configured in the tunnel ingress."
   type        = string
-  default     = "http://localhost:8788"
+  default     = "http://127.0.0.1:8788"
 }
 
 variable "access_application_name" {

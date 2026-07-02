@@ -11,3 +11,4 @@ All notable changes to RelayQuay are recorded here.
 - Moved runtime deployment files under `deploy/`.
 - Hardened public ignore rules and genericized Plugroot integration examples.
 - Added root-hosted web-client mode for dedicated protected hostnames.
+- Fixed containerized `cloudflared` loopback origin routing.
