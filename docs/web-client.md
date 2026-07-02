@@ -18,6 +18,9 @@ RELAYQUAY_WEBCLIENT_PATH=/sky
 RUSTDESK_WEB_ROOT=/var/lib/relayquay/webclient
 ```
 
+Use `RELAYQUAY_WEBCLIENT_PATH=/` when the protected hostname is dedicated to
+RelayQuay and should serve the web client at the hostname root.
+
 Place the static web client files in `RUSTDESK_WEB_ROOT`. At minimum,
 `index.html` must exist:
 
@@ -38,7 +41,8 @@ Then validate and start RelayQuay:
 With `RELAYQUAY_WEBCLIENT=1`, Caddy uses the web-client overlay:
 
 - `RELAYQUAY_WEBCLIENT_PATH` serves the supplied static web client. The default
-  is `/sky`, so the browser URL is usually `https://<your-host>/sky/`.
+  is `/sky`, so the browser URL is usually `https://<your-host>/sky/`. Use `/`
+  for a dedicated hostname such as `https://<your-host>/`.
 - `/healthz` and `/.well-known/relayquay` return the RelayQuay health response.
 - `/ws/id` proxies to `hbbs` WebSocket.
 - `/ws/relay` proxies to `hbbr` WebSocket.

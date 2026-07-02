@@ -10,3 +10,4 @@ All notable changes to RelayQuay are recorded here.
 - Added infrastructure, operations, ADR, and Terraform reference docs.
 - Moved runtime deployment files under `deploy/`.
 - Hardened public ignore rules and genericized Plugroot integration examples.
+- Added root-hosted web-client mode for dedicated protected hostnames.

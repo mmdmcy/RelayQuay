@@ -98,6 +98,9 @@ When enabled, `/sky/` serves the static web client while `/ws/id` and
 intentionally does not bundle or fetch RustDesk's hosted web app. See
 [docs/web-client.md](docs/web-client.md).
 
+For a dedicated protected hostname, set `RELAYQUAY_WEBCLIENT_PATH=/` to serve
+the web client at the hostname root.
+
 ## Security Defaults
 
 - No Cloudflare token is committed.

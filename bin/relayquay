@@ -55,7 +55,11 @@ compose() {
   local compose_files=(-f "$COMPOSE_DIR/compose.yaml")
   case "${RELAYQUAY_WEBCLIENT,,}" in
     1|true|yes|on)
-      compose_files+=(-f "$COMPOSE_DIR/webclient.yaml")
+      if [[ "$RELAYQUAY_WEBCLIENT_PATH" == "/" ]]; then
+        compose_files+=(-f "$COMPOSE_DIR/webclient-root.yaml")
+      else
+        compose_files+=(-f "$COMPOSE_DIR/webclient.yaml")
+      fi
       ;;
   esac
 
