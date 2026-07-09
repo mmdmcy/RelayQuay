@@ -1,16 +1,28 @@
 # Cloudflare Access
 
-RelayQuay assumes Cloudflare is only the authenticated front door for the WSS
-gateway. RustDesk traffic still goes to your self-hosted `hbbs` and `hbbr`
-processes.
+RelayQuay uses Cloudflare Tunnel as the public transport and Cloudflare Access
+as the authenticated front door for protected hostnames. Do not attach Access
+to a public cover hostname; Access redirects are visible before the request can
+reach the local cover response.
 
 ## Tunnel
 
-Create a Cloudflare Tunnel and route your public hostname to the local Caddy
+Create a Cloudflare Tunnel and route each RelayQuay hostname to the local Caddy
 gateway:
 
 ```text
 Hostname: rustdesk-wss.example.com
+Service:  http://127.0.0.1:8788
+```
+
+For private HTTP app mode, route both the public cover hostname and the
+protected app hostname to the same service:
+
+```text
+Hostname: relayquay-public.example.com
+Service:  http://127.0.0.1:8788
+
+Hostname: relayquay-private.example.com
 Service:  http://127.0.0.1:8788
 ```
 
@@ -20,10 +32,21 @@ env file selected with `RELAYQUAY_ENV_FILE`.
 
 ## Access Application
 
-Create a Cloudflare Access self-hosted application for the same hostname:
+For RustDesk WSS mode, create a Cloudflare Access self-hosted application for
+the WSS hostname:
 
 ```text
 Application domain: rustdesk-wss.example.com
+Policy action:      Allow
+Include:            your email address or your identity group
+Session duration:   short enough for your risk tolerance
+```
+
+For private HTTP app mode, create the Access application for
+`RELAYQUAY_APP_HOST`, not `RELAYQUAY_PUBLIC_HOST`:
+
+```text
+Application domain: relayquay-private.example.com
 Policy action:      Allow
 Include:            your email address or your identity group
 Session duration:   short enough for your risk tolerance
@@ -43,6 +66,9 @@ https://rustdesk-wss.example.com/healthz
 
 After Access authentication succeeds, the browser has the Access session cookie
 for your hostname. Then open RustDesk Web and configure your self-hosted server.
+
+For private HTTP app mode, open `https://relayquay-private.example.com/`. The
+public cover hostname should continue to return a plain `404 Not Found`.
 
 ## CORS and Cookies
 

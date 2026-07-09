@@ -1,12 +1,21 @@
 ENV_FILE ?= /var/lib/relayquay/relayquay.env
 
-.PHONY: init doctor up down stop status logs config key
+.PHONY: init doctor activate cover pause up down stop status logs config key
 
 init:
 	./bin/relayquay init
 
 doctor:
 	RELAYQUAY_ENV_FILE=$(ENV_FILE) ./bin/relayquay doctor
+
+activate:
+	RELAYQUAY_ENV_FILE=$(ENV_FILE) ./bin/relayquay activate
+
+cover:
+	RELAYQUAY_ENV_FILE=$(ENV_FILE) ./bin/relayquay cover
+
+pause:
+	RELAYQUAY_ENV_FILE=$(ENV_FILE) ./bin/relayquay pause
 
 up:
 	RELAYQUAY_ENV_FILE=$(ENV_FILE) ./bin/relayquay up

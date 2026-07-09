@@ -17,7 +17,7 @@ variable "tunnel_id" {
 }
 
 variable "public_hostname" {
-  description = "Access-protected hostname used by RelayQuay."
+  description = "Public hostname routed to RelayQuay. For cover deployments, do not attach Cloudflare Access to this hostname."
   type        = string
 }
 
@@ -25,6 +25,18 @@ variable "origin_service" {
   description = "Origin service configured in the tunnel ingress."
   type        = string
   default     = "http://127.0.0.1:8788"
+}
+
+variable "access_application_domain" {
+  description = "Optional Cloudflare Access application domain. Leave empty for cover-only public hostnames; use a separate protected hostname when Access is required."
+  type        = string
+  default     = ""
+}
+
+variable "create_access_dns_record" {
+  description = "Create a proxied DNS record for access_application_domain."
+  type        = bool
+  default     = true
 }
 
 variable "access_application_name" {
@@ -40,6 +52,7 @@ variable "access_session_duration" {
 }
 
 variable "allowed_emails" {
-  description = "Email identities allowed by the Access policy."
+  description = "Email identities allowed by the Access policy when access_application_domain is set."
   type        = list(string)
+  default     = []
 }

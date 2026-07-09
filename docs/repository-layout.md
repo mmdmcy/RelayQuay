@@ -31,6 +31,8 @@ Do not commit:
 - Terraform state
 - tunnel tokens
 - real private deployment hostnames
+- generated onion hostnames or onion service keys
+- onion client authorization private keys
 - RustDesk private keys or databases
 - generated static web-client assets
 - local operator notes

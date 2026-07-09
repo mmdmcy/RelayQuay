@@ -25,8 +25,9 @@ rm -f "$tmpenv"
 ## Privacy
 
 Do not commit real `.env` files, tunnel tokens, hostnames for private
-deployments, RustDesk private keys, logs, databases, screenshots, or local
-operator notes.
+deployments, generated onion hostnames, onion service keys, onion client
+authorization keys, RustDesk private keys, logs, databases, screenshots, or
+local operator notes.
 
 Use placeholders in examples and keep real values in the private env file
 selected by `RELAYQUAY_ENV_FILE`.

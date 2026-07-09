@@ -7,11 +7,14 @@ COMPOSE_DIR="$ROOT_DIR/deploy/compose"
 
 usage() {
   cat <<'USAGE'
-RelayQuay - RustDesk Web WSS gateway helper
+RelayQuay - private tunnel gateway helper
 
 Usage:
   relayquay init
   relayquay doctor
+  relayquay pause
+  relayquay cover
+  relayquay activate
   relayquay up [service...]
   relayquay down
   relayquay stop [service...]
@@ -38,6 +41,13 @@ load_env() {
   RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
   RELAYQUAY_RESTART_POLICY="${RELAYQUAY_RESTART_POLICY:-unless-stopped}"
   CLOUDFLARED_PROTOCOL="${CLOUDFLARED_PROTOCOL:-quic}"
+  RELAYQUAY_MODE="${RELAYQUAY_MODE:-active}"
+  RELAYQUAY_GATEWAY="${RELAYQUAY_GATEWAY:-rustdesk}"
+  RELAYQUAY_APP_HOST="${RELAYQUAY_APP_HOST:-${RELAYQUAY_ACCESS_HOST:-}}"
+  if [[ "${RELAYQUAY_APP_HOST:-}" == "" ]]; then
+    RELAYQUAY_APP_HOST="relayquay-app.invalid"
+  fi
+  RELAYQUAY_APP_UPSTREAM="${RELAYQUAY_APP_UPSTREAM:-127.0.0.1:45080}"
   RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/relayquay/rustdesk}"
   RELAYQUAY_WEBCLIENT="${RELAYQUAY_WEBCLIENT:-0}"
   RELAYQUAY_WEBCLIENT_PATH="${RELAYQUAY_WEBCLIENT_PATH:-/sky}"
@@ -49,12 +59,52 @@ load_env() {
   RUSTDESK_WEB_ROOT="${RUSTDESK_WEB_ROOT:-$RELAYQUAY_STATE_DIR/webclient}"
   RUSTDESK_HBBS_WS_UPSTREAM="${RUSTDESK_HBBS_WS_UPSTREAM:-127.0.0.1:21118}"
   RUSTDESK_HBBR_WS_UPSTREAM="${RUSTDESK_HBBR_WS_UPSTREAM:-127.0.0.1:21119}"
+
+  case "${RELAYQUAY_MODE,,}" in
+    active|on|live)
+      RELAYQUAY_MODE="active"
+      ;;
+    cover|covered|pause|paused)
+      RELAYQUAY_MODE="cover"
+      ;;
+    *)
+      echo "error: RELAYQUAY_MODE must be active or cover" >&2
+      exit 2
+      ;;
+  esac
+
+  case "${RELAYQUAY_GATEWAY,,}" in
+    rustdesk|wss)
+      RELAYQUAY_GATEWAY="rustdesk"
+      ;;
+    app|http|upstream|rustopviewer)
+      RELAYQUAY_GATEWAY="app"
+      ;;
+    *)
+      echo "error: RELAYQUAY_GATEWAY must be rustdesk or app" >&2
+      exit 2
+      ;;
+  esac
+
+  case "$RELAYQUAY_MODE:$RELAYQUAY_GATEWAY" in
+    cover:*)
+      RELAYQUAY_CADDYFILE="${RELAYQUAY_CADDYFILE:-./deploy/caddy/Caddyfile.cover}"
+      ;;
+    active:app)
+      RELAYQUAY_CADDYFILE="${RELAYQUAY_CADDYFILE:-./deploy/caddy/Caddyfile.app}"
+      ;;
+    active:rustdesk)
+      RELAYQUAY_CADDYFILE="${RELAYQUAY_CADDYFILE:-./deploy/caddy/Caddyfile}"
+      ;;
+  esac
+
+  export RELAYQUAY_MODE RELAYQUAY_GATEWAY RELAYQUAY_APP_HOST RELAYQUAY_APP_UPSTREAM RELAYQUAY_CADDYFILE
 }
 
 compose() {
   local compose_files=(-f "$COMPOSE_DIR/compose.yaml")
-  case "${RELAYQUAY_WEBCLIENT,,}" in
-    1|true|yes|on)
+  case "$RELAYQUAY_MODE:$RELAYQUAY_GATEWAY:${RELAYQUAY_WEBCLIENT,,}" in
+    active:rustdesk:1|active:rustdesk:true|active:rustdesk:yes|active:rustdesk:on)
       if [[ "$RELAYQUAY_WEBCLIENT_PATH" == "/" ]]; then
         compose_files+=(-f "$COMPOSE_DIR/webclient-root.yaml")
       else
@@ -68,6 +118,35 @@ compose() {
     --project-directory "$ROOT_DIR" \
     "${compose_files[@]}" \
     "$@"
+}
+
+set_env_var() {
+  local key="$1"
+  local value="$2"
+  local state_owner="${RELAYQUAY_STATE_OWNER:-${SUDO_USER:-${USER}}}"
+  local state_group="${RELAYQUAY_STATE_GROUP:-$(id -gn "$state_owner")}"
+
+  sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$(dirname "$ENV_FILE")"
+  if [[ ! -f "$ENV_FILE" ]]; then
+    sudo install -o "$state_owner" -g "$state_group" -m 600 "$ROOT_DIR/.env.example" "$ENV_FILE"
+  fi
+
+  if grep -qE "^${key}=" "$ENV_FILE"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+  else
+    printf '\n%s=%s\n' "$key" "$value" >>"$ENV_FILE"
+  fi
+}
+
+webclient_enabled() {
+  case "${RELAYQUAY_WEBCLIENT,,}" in
+    1|true|yes|on)
+      [[ "$RELAYQUAY_MODE" == "active" && "$RELAYQUAY_GATEWAY" == "rustdesk" ]]
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 cmd_init() {
@@ -87,11 +166,9 @@ cmd_init() {
   load_env
   sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$RELAYQUAY_STATE_DIR"
   sudo install -d -o "$state_owner" -g "$state_group" -m 700 "$RELAYQUAY_STATE_DIR/caddy"
-  case "${RELAYQUAY_WEBCLIENT,,}" in
-    1|true|yes|on)
-      sudo install -d -o "$state_owner" -g "$state_group" -m 755 "$RUSTDESK_WEB_ROOT"
-      ;;
-  esac
+  if webclient_enabled; then
+    sudo install -d -o "$state_owner" -g "$state_group" -m 755 "$RUSTDESK_WEB_ROOT"
+  fi
 }
 
 cmd_doctor() {
@@ -117,18 +194,38 @@ cmd_doctor() {
     echo "ok: Cloudflare tunnel token is set"
   fi
 
-  if [[ "${RELAYQUAY_PUBLIC_HOST:-}" == "" || "${RELAYQUAY_PUBLIC_HOST:-}" == "rustdesk-wss.example.com" ]]; then
-    echo "warn: RELAYQUAY_PUBLIC_HOST is still a placeholder"
-  else
-    echo "ok: public hostname is configured"
-  fi
+  case "${RELAYQUAY_PUBLIC_HOST:-}" in
+    ""|rustdesk-wss.example.com|relayquay.example.com|relayquay-public.example.com)
+      echo "warn: RELAYQUAY_PUBLIC_HOST is still an example value"
+      ;;
+    *)
+      echo "ok: public hostname is configured"
+      ;;
+  esac
 
-  check_tcp_upstream "$RUSTDESK_HBBS_WS_UPSTREAM" "hbbs WebSocket"
-  check_tcp_upstream "$RUSTDESK_HBBR_WS_UPSTREAM" "hbbr WebSocket"
-  check_webclient_assets
-  check_raw_rustdesk_listeners
+  echo "ok: mode is $RELAYQUAY_MODE"
+  echo "ok: gateway is $RELAYQUAY_GATEWAY"
+  case "$RELAYQUAY_MODE:$RELAYQUAY_GATEWAY" in
+    active:app)
+      if [[ "$RELAYQUAY_APP_HOST" == "relayquay-app.invalid" ]]; then
+        echo "warn: RELAYQUAY_APP_HOST is not set; app upstream will not be served by a real hostname"
+      else
+        echo "ok: app hostname is configured"
+      fi
+      check_tcp_upstream "$RELAYQUAY_APP_UPSTREAM" "private app"
+      ;;
+    active:rustdesk)
+      check_tcp_upstream "$RUSTDESK_HBBS_WS_UPSTREAM" "hbbs WebSocket"
+      check_tcp_upstream "$RUSTDESK_HBBR_WS_UPSTREAM" "hbbr WebSocket"
+      check_webclient_assets
+      check_raw_rustdesk_listeners
+      ;;
+    cover:*)
+      echo "ok: cover mode serves the neutral cover response instead of an upstream"
+      ;;
+  esac
 
-  if curl -fsS "http://${RELAYQUAY_BIND}:${RELAYQUAY_LISTEN_PORT}/healthz" >/dev/null 2>&1; then
+  if curl -fsS -H "Host: localhost" "http://${RELAYQUAY_BIND}:${RELAYQUAY_LISTEN_PORT}/healthz" >/dev/null 2>&1; then
     echo "ok: local gateway health endpoint is responding"
   else
     echo "warn: local gateway is not responding yet"
@@ -179,6 +276,28 @@ check_raw_rustdesk_listeners() {
   fi
 }
 
+cmd_pause() {
+  set_env_var RELAYQUAY_MODE cover
+  load_env
+  compose up -d --force-recreate caddy
+  compose stop cloudflared
+  echo "paused: cover mode is configured and cloudflared is stopped"
+}
+
+cmd_cover() {
+  set_env_var RELAYQUAY_MODE cover
+  load_env
+  compose up -d --force-recreate caddy cloudflared
+  echo "covered: cloudflared is running and Caddy serves the neutral cover response"
+}
+
+cmd_activate() {
+  set_env_var RELAYQUAY_MODE active
+  load_env
+  compose up -d --force-recreate caddy cloudflared
+  echo "active: cloudflared is running and Caddy serves the configured gateway"
+}
+
 cmd_key() {
   load_env
   local key_path="$RUSTDESK_DATA_DIR/id_ed25519.pub"
@@ -200,6 +319,15 @@ case "$cmd" in
     ;;
   doctor)
     cmd_doctor
+    ;;
+  pause)
+    cmd_pause
+    ;;
+  cover)
+    cmd_cover
+    ;;
+  activate)
+    cmd_activate
     ;;
   up)
     load_env

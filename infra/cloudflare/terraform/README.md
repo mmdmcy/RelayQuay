@@ -5,10 +5,11 @@ Cloudflare side of RelayQuay.
 
 It manages:
 
-- DNS record for the protected RelayQuay hostname.
+- DNS record for the public RelayQuay hostname.
 - Tunnel public-hostname ingress for an existing tunnel ID.
-- Cloudflare Access self-hosted application.
-- Cloudflare Access allow policy.
+- Optional DNS and tunnel ingress for a separate protected app hostname.
+- Optional Cloudflare Access self-hosted application on that separate domain.
+- Optional Cloudflare Access allow policy.
 
 It intentionally does not store tunnel tokens, API tokens, or Terraform state in
 Git.
@@ -31,6 +32,14 @@ terraform apply
 
 If you already created resources manually, import them before applying. Applying
 without imports can create duplicates or overwrite provider-managed settings.
+
+For cover-only deployments, leave `access_application_domain` empty. Do not
+point a Cloudflare Access application at the public cover hostname, because
+anonymous requests to `/` will reveal the Cloudflare Access login endpoint
+before the request can reach the cover response.
+
+For private HTTP app mode, set `access_application_domain` to the same hostname
+as `RELAYQUAY_APP_HOST`. Keep `public_hostname` as the cover hostname.
 
 ## Required Cloudflare Permissions
 

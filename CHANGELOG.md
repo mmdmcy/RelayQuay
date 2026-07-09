@@ -4,6 +4,15 @@ All notable changes to RelayQuay are recorded here.
 
 ## Unreleased
 
+- Added generic private HTTP app mode for loopback services such as
+  RustOpViewer.
+- Added transport-profile docs for Cloudflare, onion service, and VPS tunnel
+  modes.
+- Added a v3 onion service guide and torrc example.
+- Added cover, pause, and activate helper commands with a neutral `404 Not
+  Found` cover response.
+- Added Cloudflare Terraform support for a public cover hostname plus an
+  optional separate Access-protected app hostname.
 - Added a configurable optional web-client path.
 - Added optional private static web-client hosting.
 - Added formal project docs and metered-network guidance.

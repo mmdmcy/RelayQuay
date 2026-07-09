@@ -1,0 +1,20 @@
+# RelayQuay v3 onion service example.
+#
+# Install Tor from your operating system packages, then adapt this fragment into
+# torrc or an included torrc.d file. Keep HiddenServiceDir private and out of
+# Git.
+
+SocksPort 0
+
+HiddenServiceDir /var/lib/tor/relayquay/
+HiddenServiceVersion 3
+HiddenServicePort 80 127.0.0.1:8788
+
+# For private services, enable client authorization by adding one or more
+# files under:
+#
+#   /var/lib/tor/relayquay/authorized_clients/
+#
+# Each file must end in .auth and contain one line:
+#
+#   descriptor:x25519:<base32-encoded-public-key>

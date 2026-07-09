@@ -1,10 +1,13 @@
 # RelayQuay
 
-RelayQuay is a small deployment kit for exposing a self-hosted RustDesk server
-to the RustDesk Web client without publishing the raw RustDesk server ports to
-the Internet.
+RelayQuay is a small deployment kit for exposing private remote-access services
+through a loopback gateway and selectable transports without publishing raw
+service ports to the Internet. It supports the original RustDesk WebSocket
+gateway and a generic private HTTP app gateway for tools such as RustOpViewer.
+RelayQuay does not bundle those tools; it only provides the local Caddy gateway,
+transport guidance, and operational modes.
 
-The default design is intentionally narrow:
+The RustDesk WebSocket design is intentionally narrow:
 
 ```text
 rustdesk.com/web
@@ -18,6 +21,28 @@ Cloudflare Access performs the human authentication. Caddy only listens on
 loopback. RustDesk's normal TCP/UDP ports remain private to localhost, LAN,
 Tailscale, WireGuard, or another explicitly allowed private network.
 
+The private HTTP app design uses host separation:
+
+```text
+public cover hostname
+  -> Cloudflare Tunnel
+  -> loopback Caddy cover response
+
+protected app hostname
+  -> Cloudflare Access
+  -> Cloudflare Tunnel
+  -> loopback Caddy reverse proxy
+  -> private app on 127.0.0.1
+```
+
+The public cover hostname should not have a Cloudflare Access application
+attached. Otherwise anonymous requests can discover the Access login endpoint
+before the request reaches Caddy.
+
+RelayQuay is transport-oriented. Cloudflare Tunnel is the easiest transport,
+but the local gateway can also be used behind an onion service or an
+operator-owned VPS tunnel. See [docs/transports.md](docs/transports.md).
+
 ## Why This Exists
 
 RustDesk Server OSS exposes several ports for rendezvous, relay, NAT checks,
@@ -25,7 +50,8 @@ and WebSocket support. The browser client needs WebSocket Secure endpoints, but
 it does not need the raw RustDesk TCP/UDP ports to be open to the whole
 Internet.
 
-RelayQuay gives you an open-source, repeatable way to publish only:
+For RustDesk Web, RelayQuay gives you an open-source, repeatable way to publish
+only:
 
 - `https://rustdesk-wss.example.com/ws/id`
 - `https://rustdesk-wss.example.com/ws/relay`
@@ -66,17 +92,60 @@ If you want RelayQuay to run its own RustDesk OSS containers too:
 COMPOSE_PROFILES=server ./bin/relayquay up
 ```
 
+## Private HTTP App Mode
+
+Use this mode for a loopback-only HTTP/WebSocket app such as RustOpViewer:
+
+```bash
+RELAYQUAY_GATEWAY=app
+RELAYQUAY_PUBLIC_HOST=relayquay-public.example.com
+RELAYQUAY_APP_HOST=relayquay-private.example.com
+RELAYQUAY_APP_UPSTREAM=127.0.0.1:45080
+```
+
+Route both hostnames to the same Cloudflare Tunnel. Attach Cloudflare Access
+only to `RELAYQUAY_APP_HOST`; leave `RELAYQUAY_PUBLIC_HOST` as the neutral
+cover hostname. In active mode, Caddy serves the upstream only for
+`RELAYQUAY_APP_HOST` and returns a plain `404 Not Found` for all other hosts.
+
+```bash
+./bin/relayquay activate
+./bin/relayquay cover
+./bin/relayquay pause
+```
+
+`activate` serves the configured gateway. `cover` keeps the tunnel running but
+serves only the neutral cover response. `pause` configures cover mode and stops
+the Cloudflare connector.
+
+See [docs/private-http-app.md](docs/private-http-app.md).
+
+## Transport Options
+
+- Cloudflare Tunnel: easiest normal-browser setup, but Cloudflare is in the
+  request path.
+- Onion service: no Cloudflare, no DNS, and no inbound ports, but requires Tor
+  Browser or a Tor client and should use onion client authorization.
+- VPS tunnel: future normal-browser option through an operator-owned edge.
+
+See [docs/onion-service.md](docs/onion-service.md) and
+[docs/vps-transport.md](docs/vps-transport.md).
+
 ## Cloudflare Setup
 
 1. Create a Cloudflare Tunnel for the public hostname.
 2. Route the hostname to `http://127.0.0.1:8788`.
-3. Create a Cloudflare Access self-hosted application for the same hostname.
-4. Add an allow policy for only your email address or identity group.
-5. Enable an MFA-capable identity provider, or Cloudflare One-time PIN for a
+3. For RustDesk WSS mode, create a Cloudflare Access self-hosted application
+   for the WSS hostname.
+4. For private app mode, create Access only for the app hostname, not the public
+   cover hostname.
+5. Add an allow policy for only your email address or identity group.
+6. Enable an MFA-capable identity provider, or Cloudflare One-time PIN for a
    low-friction personal setup.
-6. Open `https://rustdesk-wss.example.com/healthz` in the browser first so
+7. For RustDesk WSS mode, open `https://rustdesk-wss.example.com/healthz` in
+   the browser first so
    Cloudflare Access can set its session cookie.
-7. Open `https://rustdesk.com/web`, set the self-hosted ID server to your
+8. Open `https://rustdesk.com/web`, set the self-hosted ID server to your
    public hostname, enter your RustDesk server key, and connect.
 
 See [docs/cloudflare-access.md](docs/cloudflare-access.md) and
@@ -153,6 +222,10 @@ checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.
 - [Firewall](docs/firewall.md)
 - [Infrastructure](docs/infrastructure.md)
 - [Network Usage](docs/network-usage.md)
+- [Onion Service](docs/onion-service.md)
 - [Operations](docs/operations.md)
+- [Private HTTP App](docs/private-http-app.md)
 - [Repository Layout](docs/repository-layout.md)
 - [Threat Model](docs/threat-model.md)
+- [Transports](docs/transports.md)
+- [VPS Transport](docs/vps-transport.md)
