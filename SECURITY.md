@@ -9,6 +9,8 @@ RelayQuay is designed to be public source code with private runtime state.
 - Generated onion hostnames, onion service keys, or onion client authorization
   keys.
 - RustDesk private keys or server databases.
+- RustOpViewer pairing codes, session tokens, remembered-browser state, access
+  passwords, admin tokens, captures, or logs.
 - Real `.env` files.
 - Local firewall state, service logs, media, backups, or machine notes.
 - Web-client build output that contains private hostnames or deployment-specific
@@ -22,7 +24,13 @@ values in a private env file selected with `RELAYQUAY_ENV_FILE`.
 The intended public surface depends on the selected transport: a
 Cloudflare-protected hostname, an authenticated onion service, or an
 operator-owned VPS edge. The raw RustDesk ports should stay private to
-loopback, LAN, VPN, or an explicit firewall allowlist.
+loopback, LAN, VPN, or an explicit firewall allowlist. RelayQuay and private
+app upstream ports should stay on loopback unless a reviewed private-network
+allowlist requires otherwise.
+
+Cloudflare Access is an outer identity gate. RustOpViewer deployments must keep
+the application's own pairing, session, remembered-browser, remote-input, and
+revocation controls enabled. See [docs/rustopviewer.md](docs/rustopviewer.md).
 
 ## Reporting
 

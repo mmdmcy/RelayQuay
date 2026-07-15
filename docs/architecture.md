@@ -1,9 +1,10 @@
 # Architecture
 
 RelayQuay publishes narrow private service surfaces through Cloudflare Tunnel.
-It can proxy the RustDesk WebSocket surface needed by browser clients, or a
-generic loopback HTTP/WebSocket app such as RustOpViewer. It does not publish
-raw RustDesk TCP/UDP ports to the Internet.
+Its primary profile proxies RustOpViewer as a loopback HTTP/WebSocket app. It
+can also proxy a generic private app or the RustDesk WebSocket surface needed by
+browser clients. It does not publish app listeners or raw RustDesk TCP/UDP
+ports to the Internet.
 
 ```text
 browser
@@ -13,7 +14,7 @@ browser
   -> hbbs WebSocket and hbbr WebSocket
 ```
 
-Private HTTP app mode uses two hostnames:
+RustOpViewer/private app mode uses two hostnames:
 
 ```text
 public cover hostname

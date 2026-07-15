@@ -1,6 +1,10 @@
 ENV_FILE ?= /var/lib/relayquay/relayquay.env
 
-.PHONY: init doctor activate cover pause up down stop status logs config key
+.PHONY: check init doctor activate cover pause up down stop status logs config key
+
+check:
+	bash -n bin/relayquay
+	./tests/profile-compatibility.sh
 
 init:
 	./bin/relayquay init

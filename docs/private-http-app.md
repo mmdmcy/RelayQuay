@@ -1,8 +1,10 @@
 # Private HTTP App Mode
 
 RelayQuay can front a loopback-only HTTP or WebSocket application through a
-supported transport. This is useful for tools such as RustOpViewer, but
-RelayQuay does not include, download, or manage that application.
+supported transport. RustOpViewer has the first-class `rustopviewer` profile;
+use `app` for other services. RelayQuay does not include, download, or manage
+the upstream application. See [RustOpViewer](rustopviewer.md) for pairing and
+migration guidance specific to that profile.
 
 ## Hostnames
 
@@ -22,6 +24,11 @@ Caddy only proxies the upstream when the request Host matches
 `RELAYQUAY_APP_HOST`. Requests to the public cover hostname, unknown hostnames,
 or arbitrary paths return a plain `404 Not Found`.
 
+A one-host migration is supported by setting `RELAYQUAY_APP_HOST` equal to the
+old `RELAYQUAY_PUBLIC_HOST` and retaining Access on that hostname. In active
+mode that hostname serves the app rather than an anonymous cover. Prefer two
+hostnames for new deployments.
+
 ## Environment
 
 Set these values in the private env file:
@@ -37,6 +44,12 @@ CLOUDFLARE_TUNNEL_TOKEN="<your-cloudflare-tunnel-token>"
 
 Run the private app separately and bind it to loopback. For example, if your
 app listens on `127.0.0.1:45080`, RelayQuay will reverse proxy to that address.
+The protected `/healthz` and `/.well-known/relayquay` paths are answered by
+RelayQuay without reaching the app.
+
+Older RustOpViewer configs may temporarily use `ROV_UPSTREAM`. RelayQuay maps
+that compatibility variable to `RELAYQUAY_APP_UPSTREAM`; migrate the private
+env after `doctor` reports it.
 
 ## Commands
 

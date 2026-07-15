@@ -1,27 +1,28 @@
 # RelayQuay
 
-RelayQuay is a small deployment kit for exposing private remote-access services
-through a loopback gateway and selectable transports without publishing raw
-service ports to the Internet. It supports the original RustDesk WebSocket
-gateway and a generic private HTTP app gateway for tools such as RustOpViewer.
-RelayQuay does not bundle those tools; it only provides the local Caddy gateway,
-transport guidance, and operational modes.
+RelayQuay is a RustOpViewer-first deployment kit for exposing private
+remote-access services through a loopback gateway and selectable transports
+without publishing raw service ports to the Internet. It also supports generic
+private HTTP/WebSocket apps and the original RustDesk WebSocket gateway.
+RelayQuay does not bundle those tools; it provides the local Caddy gateway,
+transport guidance, and fail-closed operational modes.
 
-The RustDesk WebSocket design is intentionally narrow:
+The primary RustOpViewer profile keeps both services on loopback:
 
 ```text
-rustdesk.com/web
-  -> Cloudflare Access protected hostname
+browser
+  -> protected app hostname
+  -> Cloudflare Access
   -> Cloudflare Tunnel
-  -> loopback Caddy WebSocket gateway
-  -> hbbs :21118 and hbbr :21119
+  -> RelayQuay on 127.0.0.1:8788
+  -> RustOpViewer on 127.0.0.1:45080
 ```
 
-Cloudflare Access performs the human authentication. Caddy only listens on
-loopback. RustDesk's normal TCP/UDP ports remain private to localhost, LAN,
-Tailscale, WireGuard, or another explicitly allowed private network.
+Cloudflare Access is the outer identity gate. RustOpViewer still owns
+host-approved pairing, short-lived sessions, remembered-browser trust, and
+remote-input authorization. RelayQuay stores none of that application state.
 
-The private HTTP app design uses host separation:
+The recommended layout adds a separate public cover hostname:
 
 ```text
 public cover hostname
@@ -32,7 +33,7 @@ protected app hostname
   -> Cloudflare Access
   -> Cloudflare Tunnel
   -> loopback Caddy reverse proxy
-  -> private app on 127.0.0.1
+  -> RustOpViewer or another private app on 127.0.0.1
 ```
 
 The public cover hostname should not have a Cloudflare Access application
@@ -45,17 +46,11 @@ operator-owned VPS tunnel. See [docs/transports.md](docs/transports.md).
 
 ## Why This Exists
 
-RustDesk Server OSS exposes several ports for rendezvous, relay, NAT checks,
-and WebSocket support. The browser client needs WebSocket Secure endpoints, but
-it does not need the raw RustDesk TCP/UDP ports to be open to the whole
-Internet.
-
-For RustDesk Web, RelayQuay gives you an open-source, repeatable way to publish
-only:
-
-- `https://rustdesk-wss.example.com/ws/id`
-- `https://rustdesk-wss.example.com/ws/relay`
-- `https://rustdesk-wss.example.com/healthz`
+A browser remote-control app should not need a wildcard listener or a set of
+raw public service ports just to be reachable away from home. RelayQuay gives
+RustOpViewer a narrow loopback reverse proxy, an authenticated transport, and
+explicit active, cover, and paused states. Its RustDesk profile similarly
+publishes only the WebSocket surface needed by browser clients.
 
 Everything sensitive stays outside the repo, normally under
 `/var/lib/relayquay`.
@@ -65,41 +60,52 @@ Runtime files are grouped under `deploy/`; day-to-day operation goes through
 
 ## Quick Start
 
-Create private state and an env file:
+Create private state, then install the fail-closed RustOpViewer profile:
 
 ```bash
 ./bin/relayquay init
+install -m 600 examples/rustopviewer/relayquay.env.example \
+  /var/lib/relayquay/relayquay.env
 ```
 
 Edit `/var/lib/relayquay/relayquay.env` and set:
 
 - `RELAYQUAY_PUBLIC_HOST`
+- `RELAYQUAY_APP_HOST`
+- `RELAYQUAY_APP_UPSTREAM` if RustOpViewer is not on `127.0.0.1:45080`
 - `CLOUDFLARE_TUNNEL_TOKEN`
-- `RUSTDESK_DATA_DIR` if an existing RustDesk server stores its public key
-  somewhere else
 
-Start only the WSS gateway:
+Run RustOpViewer separately on loopback. For a source checkout:
+
+```bash
+cd /path/to/rustopviewer
+cargo run --release -- --headless
+```
+
+The profile starts in cover mode. Verify it, bring up the neutral cover, and
+activate the protected app only after the tunnel and Access policy are ready:
 
 ```bash
 ./bin/relayquay doctor
 ./bin/relayquay up
+./bin/relayquay activate
 ./bin/relayquay logs
 ```
 
-If you want RelayQuay to run its own RustDesk OSS containers too:
+Opening the protected hostname does not bypass RustOpViewer security. A new
+browser still needs a host-generated one-time pairing code, an approved
+unattended login, or remembered trust that has not been revoked. See the
+[RustOpViewer guide](docs/rustopviewer.md).
+
+## RustOpViewer and Private App Modes
+
+RustOpViewer has a first-class gateway name; `app` remains available for other
+loopback HTTP/WebSocket services:
 
 ```bash
-COMPOSE_PROFILES=server ./bin/relayquay up
-```
-
-## Private HTTP App Mode
-
-Use this mode for a loopback-only HTTP/WebSocket app such as RustOpViewer:
-
-```bash
-RELAYQUAY_GATEWAY=app
+RELAYQUAY_GATEWAY=rustopviewer
 RELAYQUAY_PUBLIC_HOST=relayquay-public.example.com
-RELAYQUAY_APP_HOST=relayquay-private.example.com
+RELAYQUAY_APP_HOST=rov.example.com
 RELAYQUAY_APP_UPSTREAM=127.0.0.1:45080
 ```
 
@@ -118,7 +124,37 @@ cover hostname. In active mode, Caddy serves the upstream only for
 serves only the neutral cover response. `pause` configures cover mode and stops
 the Cloudflare connector.
 
-See [docs/private-http-app.md](docs/private-http-app.md).
+Existing RustOpViewer deployments may temporarily keep `ROV_UPSTREAM`; the
+helper maps it to `RELAYQUAY_APP_UPSTREAM` and reports the migration in
+`doctor`. A legacy config with no explicit gateway starts in cover mode and
+must set `RELAYQUAY_APP_HOST` before activation. The app hostname may equal the
+old `RELAYQUAY_PUBLIC_HOST` for a one-host migration, but the two-host layout is
+recommended because it keeps the public cover hostname free of Access
+redirects.
+
+See [docs/rustopviewer.md](docs/rustopviewer.md) and
+[docs/private-http-app.md](docs/private-http-app.md).
+
+## RustDesk WebSocket Profile
+
+The backwards-compatible root `.env.example` remains the RustDesk profile. It
+proxies only `/ws/id`, `/ws/relay`, and the health endpoint. RustDesk's normal
+TCP/UDP ports should remain private to localhost, LAN, Tailscale, WireGuard, or
+another explicitly allowed network.
+
+```bash
+RELAYQUAY_GATEWAY=rustdesk
+./bin/relayquay doctor
+./bin/relayquay up
+```
+
+To run the optional RustDesk OSS containers as well:
+
+```bash
+COMPOSE_PROFILES=server ./bin/relayquay up
+```
+
+See [docs/rustdesk-web.md](docs/rustdesk-web.md).
 
 ## Transport Options
 
@@ -133,20 +169,18 @@ See [docs/onion-service.md](docs/onion-service.md) and
 
 ## Cloudflare Setup
 
-1. Create a Cloudflare Tunnel for the public hostname.
-2. Route the hostname to `http://127.0.0.1:8788`.
-3. For RustDesk WSS mode, create a Cloudflare Access self-hosted application
-   for the WSS hostname.
-4. For private app mode, create Access only for the app hostname, not the public
+1. Create a Cloudflare Tunnel for the cover and protected app hostnames.
+2. Route both hostnames to `http://127.0.0.1:8788`.
+3. Create Cloudflare Access only for the protected app hostname, not the public
    cover hostname.
+4. For RustDesk WSS mode, use one Access-protected WSS hostname instead.
 5. Add an allow policy for only your email address or identity group.
 6. Enable an MFA-capable identity provider, or Cloudflare One-time PIN for a
    low-friction personal setup.
-7. For RustDesk WSS mode, open `https://rustdesk-wss.example.com/healthz` in
-   the browser first so
-   Cloudflare Access can set its session cookie.
-8. Open `https://rustdesk.com/web`, set the self-hosted ID server to your
-   public hostname, enter your RustDesk server key, and connect.
+7. Open the protected `/healthz` endpoint to establish the Access session and
+   verify RelayQuay without sending the request to RustOpViewer.
+8. Open the protected app root and complete RustOpViewer pairing. In RustDesk
+   mode, open `https://rustdesk.com/web` and configure the WSS hostname.
 
 See [docs/cloudflare-access.md](docs/cloudflare-access.md) and
 [docs/rustdesk-web.md](docs/rustdesk-web.md) for the details and caveats.
@@ -176,17 +210,21 @@ the web client at the hostname root.
 - No real hostname is committed.
 - Optional web-client assets are private operator-supplied files.
 - The gateway binds to `127.0.0.1:8788`.
+- RustOpViewer/private app upstreams should bind to loopback too.
+- Pairing codes, browser sessions, remembered trust, and admin credentials stay
+  in RustOpViewer's private state, never RelayQuay or Git.
 - The RustDesk server profile uses Docker host networking only when you opt in.
-- Firewall examples deny public access to `21115-21119` and allow private
-  networks deliberately.
+- Firewall examples deny public access to `8788`, the app port, and
+  `21115-21119`, with deliberate private-network exceptions.
 - The helper script refuses to print Cloudflare secrets.
 
 ## Network Usage
 
-RelayQuay is quiet while idle. The main bandwidth cost is an active RustDesk
-desktop session, not the gateway itself. For metered Wi-Fi, keep Cloudflare
-Access enabled, stop the tunnel when you do not need browser access, and lower
-RustDesk quality/frame-rate settings during long sessions.
+RelayQuay is quiet while idle. The main bandwidth cost is the active desktop
+stream, not the gateway itself. For metered Wi-Fi, keep Cloudflare Access
+enabled, stop the tunnel when you do not need browser access, and use
+RustOpViewer's Data Saver or Emergency profile. RustDesk users can lower
+quality, resolution, and frame rate.
 
 ```bash
 ./bin/relayquay stop cloudflared
@@ -205,12 +243,14 @@ configured to use that hostname for both ID and relay where the UI supports it.
 
 ## Plugroot
 
-RelayQuay is standalone. If you also use a host orchestrator such as Plugroot,
-keep this repository as a code-only checkout and register it with private local
-configuration based on
+RelayQuay is standalone. If you also use Plugroot, register this standalone
+checkout as a managed `[[repo]]` and monitor its loopback port as a manual
+service using
 [examples/plugroot/plugroot.local.example.toml](examples/plugroot/plugroot.local.example.toml).
-In the private env file, set `RELAYQUAY_STATE_DIR` and `RUSTDESK_DATA_DIR` to
-the host-specific state paths you actually use.
+`plugroot repos sync` owns checkout updates; `bin/relayquay` remains the
+lifecycle authority because it selects active, cover, RustOpViewer, and
+RustDesk Compose variants. Keep the private env and state outside both code
+checkouts.
 
 Do not put real tunnel tokens, private hostnames, or local-only notes in this
 checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.
@@ -226,6 +266,7 @@ checkout. Put those in the private env file selected by `RELAYQUAY_ENV_FILE`.
 - [Operations](docs/operations.md)
 - [Private HTTP App](docs/private-http-app.md)
 - [Repository Layout](docs/repository-layout.md)
+- [RustOpViewer](docs/rustopviewer.md)
 - [Threat Model](docs/threat-model.md)
 - [Transports](docs/transports.md)
 - [VPS Transport](docs/vps-transport.md)

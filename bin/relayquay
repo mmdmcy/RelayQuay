@@ -41,11 +41,25 @@ load_env() {
   RELAYQUAY_LISTEN_PORT="${RELAYQUAY_LISTEN_PORT:-8788}"
   RELAYQUAY_RESTART_POLICY="${RELAYQUAY_RESTART_POLICY:-unless-stopped}"
   CLOUDFLARED_PROTOCOL="${CLOUDFLARED_PROTOCOL:-quic}"
-  RELAYQUAY_MODE="${RELAYQUAY_MODE:-active}"
+  RELAYQUAY_LEGACY_ROV_CONFIG=0
+  if [[ -z "${RELAYQUAY_GATEWAY:-}" && -n "${ROV_UPSTREAM:-}" ]]; then
+    RELAYQUAY_GATEWAY="rustopviewer"
+    RELAYQUAY_LEGACY_ROV_CONFIG=1
+  fi
   RELAYQUAY_GATEWAY="${RELAYQUAY_GATEWAY:-rustdesk}"
+  if [[ "$RELAYQUAY_LEGACY_ROV_CONFIG" == "1" && -z "${RELAYQUAY_MODE:-}" ]]; then
+    RELAYQUAY_MODE="cover"
+  else
+    RELAYQUAY_MODE="${RELAYQUAY_MODE:-active}"
+  fi
   RELAYQUAY_APP_HOST="${RELAYQUAY_APP_HOST:-${RELAYQUAY_ACCESS_HOST:-}}"
   if [[ "${RELAYQUAY_APP_HOST:-}" == "" ]]; then
     RELAYQUAY_APP_HOST="relayquay-app.invalid"
+  fi
+  RELAYQUAY_USING_ROV_UPSTREAM=0
+  if [[ -z "${RELAYQUAY_APP_UPSTREAM:-}" && -n "${ROV_UPSTREAM:-}" ]]; then
+    RELAYQUAY_APP_UPSTREAM="$ROV_UPSTREAM"
+    RELAYQUAY_USING_ROV_UPSTREAM=1
   fi
   RELAYQUAY_APP_UPSTREAM="${RELAYQUAY_APP_UPSTREAM:-127.0.0.1:45080}"
   RUSTDESK_DATA_DIR="${RUSTDESK_DATA_DIR:-/var/lib/relayquay/rustdesk}"
@@ -77,11 +91,14 @@ load_env() {
     rustdesk|wss)
       RELAYQUAY_GATEWAY="rustdesk"
       ;;
-    app|http|upstream|rustopviewer)
+    rustopviewer|rov)
+      RELAYQUAY_GATEWAY="rustopviewer"
+      ;;
+    app|http|upstream)
       RELAYQUAY_GATEWAY="app"
       ;;
     *)
-      echo "error: RELAYQUAY_GATEWAY must be rustdesk or app" >&2
+      echo "error: RELAYQUAY_GATEWAY must be rustopviewer, app, or rustdesk" >&2
       exit 2
       ;;
   esac
@@ -90,7 +107,7 @@ load_env() {
     cover:*)
       RELAYQUAY_CADDYFILE="${RELAYQUAY_CADDYFILE:-./deploy/caddy/Caddyfile.cover}"
       ;;
-    active:app)
+    active:app|active:rustopviewer)
       RELAYQUAY_CADDYFILE="${RELAYQUAY_CADDYFILE:-./deploy/caddy/Caddyfile.app}"
       ;;
     active:rustdesk)
@@ -99,9 +116,24 @@ load_env() {
   esac
 
   export RELAYQUAY_MODE RELAYQUAY_GATEWAY RELAYQUAY_APP_HOST RELAYQUAY_APP_UPSTREAM RELAYQUAY_CADDYFILE
+  export RELAYQUAY_LEGACY_ROV_CONFIG RELAYQUAY_USING_ROV_UPSTREAM
+}
+
+app_gateway_enabled() {
+  [[ "$RELAYQUAY_GATEWAY" == "app" || "$RELAYQUAY_GATEWAY" == "rustopviewer" ]]
+}
+
+require_active_app_host() {
+  if [[ "$RELAYQUAY_MODE" == "active" ]] && app_gateway_enabled &&
+    [[ "$RELAYQUAY_APP_HOST" == "relayquay-app.invalid" ]]; then
+    echo "error: active $RELAYQUAY_GATEWAY mode requires RELAYQUAY_APP_HOST" >&2
+    echo "error: set it to the Access-protected hostname; it may equal RELAYQUAY_PUBLIC_HOST for a one-host migration" >&2
+    return 2
+  fi
 }
 
 compose() {
+  require_active_app_host
   local compose_files=(-f "$COMPOSE_DIR/compose.yaml")
   case "$RELAYQUAY_MODE:$RELAYQUAY_GATEWAY:${RELAYQUAY_WEBCLIENT,,}" in
     active:rustdesk:1|active:rustdesk:true|active:rustdesk:yes|active:rustdesk:on)
@@ -188,14 +220,17 @@ cmd_doctor() {
     echo "warn: private env file is missing; run ./bin/relayquay init"
   fi
 
-  if [[ "${CLOUDFLARE_TUNNEL_TOKEN:-}" == "" || "${CLOUDFLARE_TUNNEL_TOKEN:-}" == "<your-cloudflare-tunnel-token>" ]]; then
-    echo "warn: CLOUDFLARE_TUNNEL_TOKEN is not set in the private env file"
-  else
-    echo "ok: Cloudflare tunnel token is set"
-  fi
+  case "${CLOUDFLARE_TUNNEL_TOKEN:-}" in
+    ""|"<your-cloudflare-tunnel-token>"|replace-me)
+      echo "warn: CLOUDFLARE_TUNNEL_TOKEN is not set in the private env file"
+      ;;
+    *)
+      echo "ok: Cloudflare tunnel token is set"
+      ;;
+  esac
 
   case "${RELAYQUAY_PUBLIC_HOST:-}" in
-    ""|rustdesk-wss.example.com|relayquay.example.com|relayquay-public.example.com)
+    ""|rov.example.com|rustdesk-wss.example.com|relayquay.example.com|relayquay-public.example.com)
       echo "warn: RELAYQUAY_PUBLIC_HOST is still an example value"
       ;;
     *)
@@ -205,14 +240,35 @@ cmd_doctor() {
 
   echo "ok: mode is $RELAYQUAY_MODE"
   echo "ok: gateway is $RELAYQUAY_GATEWAY"
+  if app_gateway_enabled; then
+    if [[ "$RELAYQUAY_APP_HOST" == "relayquay-app.invalid" ]]; then
+      echo "error: RELAYQUAY_APP_HOST is not set; app traffic will fail closed" >&2
+      echo "error: set it to the Access-protected hostname before running activate" >&2
+      failed=1
+    else
+      case "$RELAYQUAY_APP_HOST" in
+        rov.example.com|relayquay-private.example.com)
+          echo "warn: RELAYQUAY_APP_HOST is still an example value"
+          ;;
+        *)
+          echo "ok: app hostname is configured"
+          ;;
+      esac
+    fi
+    if [[ "$RELAYQUAY_USING_ROV_UPSTREAM" == "1" ]]; then
+      echo "warn: ROV_UPSTREAM is a compatibility alias; migrate it to RELAYQUAY_APP_UPSTREAM"
+    fi
+    if [[ "$RELAYQUAY_LEGACY_ROV_CONFIG" == "1" ]]; then
+      echo "warn: legacy RustOpViewer config detected; cover mode is the migration default"
+    fi
+    check_app_listener "$RELAYQUAY_APP_UPSTREAM"
+  fi
   case "$RELAYQUAY_MODE:$RELAYQUAY_GATEWAY" in
     active:app)
-      if [[ "$RELAYQUAY_APP_HOST" == "relayquay-app.invalid" ]]; then
-        echo "warn: RELAYQUAY_APP_HOST is not set; app upstream will not be served by a real hostname"
-      else
-        echo "ok: app hostname is configured"
-      fi
       check_tcp_upstream "$RELAYQUAY_APP_UPSTREAM" "private app"
+      ;;
+    active:rustopviewer)
+      check_tcp_upstream "$RELAYQUAY_APP_UPSTREAM" "RustOpViewer"
       ;;
     active:rustdesk)
       check_tcp_upstream "$RUSTDESK_HBBS_WS_UPSTREAM" "hbbs WebSocket"
@@ -257,6 +313,32 @@ check_tcp_upstream() {
     echo "ok: $label upstream reachable at $upstream"
   else
     echo "warn: $label upstream not reachable at $upstream"
+  fi
+}
+
+check_app_listener() {
+  local upstream="$1"
+  local host="${upstream%:*}"
+  local port="${upstream##*:}"
+
+  case "$host" in
+    127.0.0.1|localhost|\[::1\])
+      ;;
+    *)
+      echo "warn: app upstream $upstream is not loopback; review its firewall exposure"
+      ;;
+  esac
+
+  if ! command -v ss >/dev/null 2>&1 || [[ ! "$port" =~ ^[0-9]+$ ]]; then
+    return 0
+  fi
+
+  local wildcard
+  wildcard="$(ss -ltnH "sport = :$port" 2>/dev/null | awk '$4 ~ /^(0\.0\.0\.0|\*|\[::\]|::):[0-9]+$/ {print $1, $4}' || true)"
+  if [[ -n "$wildcard" ]]; then
+    echo "warn: app port $port is listening on a wildcard interface:"
+    echo "$wildcard" | sed 's/^/  /'
+    echo "warn: bind RustOpViewer/private apps to loopback or restrict this port with the host firewall"
   fi
 }
 

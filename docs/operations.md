@@ -68,6 +68,13 @@ Cloudflare Access before login:
 curl -I https://relayquay-private.example.com/
 ```
 
+After Access login, the protected health endpoint is answered by RelayQuay and
+does not reach RustOpViewer or another configured app:
+
+```bash
+curl -i https://relayquay-private.example.com/healthz
+```
+
 For onion service mode, the generated onion hostname should only be shared with
 authorized users, and private services should use onion client authorization.
 After Tor starts, check the hostname with:

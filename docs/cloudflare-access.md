@@ -15,8 +15,8 @@ Hostname: rustdesk-wss.example.com
 Service:  http://127.0.0.1:8788
 ```
 
-For private HTTP app mode, route both the public cover hostname and the
-protected app hostname to the same service:
+For RustOpViewer/private HTTP app mode, route both the public cover hostname
+and the protected app hostname to the same service:
 
 ```text
 Hostname: relayquay-public.example.com
@@ -42,7 +42,7 @@ Include:            your email address or your identity group
 Session duration:   short enough for your risk tolerance
 ```
 
-For private HTTP app mode, create the Access application for
+For RustOpViewer/private HTTP app mode, create the Access application for
 `RELAYQUAY_APP_HOST`, not `RELAYQUAY_PUBLIC_HOST`:
 
 ```text
@@ -67,8 +67,10 @@ https://rustdesk-wss.example.com/healthz
 After Access authentication succeeds, the browser has the Access session cookie
 for your hostname. Then open RustDesk Web and configure your self-hosted server.
 
-For private HTTP app mode, open `https://relayquay-private.example.com/`. The
-public cover hostname should continue to return a plain `404 Not Found`.
+For RustOpViewer/private HTTP app mode, first open the protected `/healthz`
+endpoint to establish the Access session and verify RelayQuay. Then open the
+app root. The public cover hostname should continue to return a plain `404 Not
+Found`.
 
 ## CORS and Cookies
 

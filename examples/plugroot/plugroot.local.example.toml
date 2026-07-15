@@ -1,28 +1,41 @@
 # Copy this into your private Plugroot local config and adjust locally.
 # Do not put real domains, paths, or tunnel tokens in this public checkout.
 #
-# For Plugroot-hosted installs, set:
+# Keep RelayQuay as a standalone checkout. Plugroot's Compose adapter cannot
+# select RelayQuay's active/cover and gateway overlays, so bin/relayquay remains
+# the lifecycle authority.
+#
+# Use an absolute repo path until Plugroot resolves managed checkout paths
+# independently of its process working directory.
+#
+# Invoke bin/relayquay with:
 #   RELAYQUAY_ENV_FILE=<private-state-root>/relayquay/relayquay.env
-# and copy .env.example there with host-specific values, including:
+# In that private file, use host-specific values, including:
 #   RELAYQUAY_STATE_DIR=<private-state-root>/relayquay
-#   RUSTDESK_DATA_DIR=<private-state-root>/rustdesk/data
+#   RELAYQUAY_GATEWAY=rustopviewer
+#   RELAYQUAY_APP_UPSTREAM=127.0.0.1:45080
+
+[[repo]]
+id = "relayquay"
+url = "https://github.com/mmdmcy/RelayQuay.git"
+path = "<absolute-path-to-relayquay-checkout>"
+ref = "main"
 
 [[service]]
 id = "relayquay"
-name = "RelayQuay RustDesk Web Gateway"
+name = "RelayQuay RustOpViewer Gateway"
 plane = "public-authenticated"
 category = "remote-access"
-kind = "compose"
-path = "<plugroot-service-root>/relayquay"
-env_file = "<private-state-root>/relayquay/relayquay.env"
-url = "https://rustdesk-wss.example.com/healthz"
+kind = "manual"
+host = "127.0.0.1"
+port = 8788
+repo = "relayquay"
+url = "https://rov.example.com/healthz"
 access = "Cloudflare Access allowlist"
-description = "Access-protected WSS gateway for RustDesk Web."
-containers = ["relayquay-caddy-1", "relayquay-cloudflared-1"]
-controls = ["start", "stop", "restart", "logs"]
+description = "Access-protected gateway monitored by Plugroot and operated with bin/relayquay."
+controls = []
 ports = [
   "8788/tcp loopback Caddy gateway",
-  "21118/tcp private hbbs WebSocket upstream",
-  "21119/tcp private hbbr WebSocket upstream",
+  "45080/tcp loopback RustOpViewer upstream",
 ]
 optional = true
