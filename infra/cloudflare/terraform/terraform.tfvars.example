@@ -5,8 +5,15 @@ tunnel_id             = "00000000-0000-0000-0000-000000000000"
 public_hostname = "relayquay-public.example.com"
 origin_service  = "http://localhost:8788"
 
-# Leave empty when the public hostname should show only the cover response.
-# If Access is required, use a separate protected hostname, not public_hostname.
+# Match RELAYQUAY_GATEWAY / RELAYQUAY_MODE in the private env file:
+# - rustdesk: access_application_domain must equal public_hostname (Access
+#   protects the RustDesk WebSocket endpoints on that hostname).
+# - app: access_application_domain is a separate protected hostname and
+#   public_hostname stays an Access-free cover.
+# - cover: leave access_application_domain empty.
+# Plan fails when these do not agree.
+gateway_mode = "app"
+
 access_application_domain = "relayquay-private.example.com"
 create_access_dns_record  = true
 

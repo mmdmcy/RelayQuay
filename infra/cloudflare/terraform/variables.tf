@@ -17,8 +17,19 @@ variable "tunnel_id" {
 }
 
 variable "public_hostname" {
-  description = "Public hostname routed to RelayQuay. For cover deployments, do not attach Cloudflare Access to this hostname."
+  description = "Public hostname routed to RelayQuay. In rustdesk mode this is the Access-protected hostname; in app and cover modes it is the cover hostname and must not carry Cloudflare Access."
   type        = string
+}
+
+variable "gateway_mode" {
+  description = "RelayQuay gateway mode this tunnel serves (RELAYQUAY_GATEWAY/RELAYQUAY_MODE): rustdesk requires access_application_domain = public_hostname; app needs a separate access_application_domain; cover leaves it empty."
+  type        = string
+  default     = "rustdesk"
+
+  validation {
+    condition     = contains(["rustdesk", "app", "cover"], var.gateway_mode)
+    error_message = "gateway_mode must be rustdesk, app, or cover."
+  }
 }
 
 variable "origin_service" {
@@ -28,7 +39,7 @@ variable "origin_service" {
 }
 
 variable "access_application_domain" {
-  description = "Optional Cloudflare Access application domain. Leave empty for cover-only public hostnames; use a separate protected hostname when Access is required."
+  description = "Cloudflare Access application domain. rustdesk mode: must equal public_hostname. app mode: a separate protected hostname. cover mode: leave empty."
   type        = string
   default     = ""
 }

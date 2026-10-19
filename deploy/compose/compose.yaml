@@ -22,7 +22,12 @@ services:
     image: cloudflare/cloudflared:${CLOUDFLARED_TAG:-2026.6.1}
     restart: ${RELAYQUAY_RESTART_POLICY:-unless-stopped}
     network_mode: host
-    command: tunnel --no-autoupdate --protocol ${CLOUDFLARED_PROTOCOL:-quic} run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in the private env file}
+    command: tunnel --no-autoupdate --protocol ${CLOUDFLARED_PROTOCOL:-quic} run
+    # The token reaches cloudflared as the TUNNEL_TOKEN environment variable,
+    # read from the private env file; never as a --token argument, which
+    # `docker ps` and `docker inspect` would show. `relayquay config` redacts it.
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in the private env file}
     depends_on:
       - caddy
 

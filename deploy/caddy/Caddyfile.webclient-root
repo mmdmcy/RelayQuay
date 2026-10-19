@@ -3,40 +3,61 @@
 	admin off
 }
 
-http://{$RELAYQUAY_BIND:127.0.0.1}:{$RELAYQUAY_LISTEN_PORT:8788} {
+http://:{$RELAYQUAY_LISTEN_PORT:8788} {
+	bind {$RELAYQUAY_BIND:127.0.0.1}
+
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
 		Cache-Control no-store
 	}
 
-	@health path /healthz /.well-known/relayquay
-	handle @health {
-		respond "relayquay ok" 200
+	@localHealth {
+		host 127.0.0.1 localhost
+		path /healthz /.well-known/relayquay
 	}
+	respond @localHealth "relayquay ok" 200
 
-	@id path /ws/id /ws/id/*
-	handle @id {
-		reverse_proxy {$RUSTDESK_HBBS_WS_UPSTREAM:127.0.0.1:21118} {
-			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto https
+	# Defense in depth behind Cloudflare Access: only requests for the
+	# protected public hostname that carry the Access JWT header reach the
+	# RustDesk endpoints. Verifying the JWT signature needs a Caddy plugin, so
+	# this is a Host match plus a header presence check, not a replacement
+	# for the Access policy at the edge. Everything else gets the neutral 404.
+	@access {
+		host {$RELAYQUAY_PUBLIC_HOST:relayquay-public.example.com}
+		header Cf-Access-Jwt-Assertion *
+	}
+	handle @access {
+		@health path /healthz /.well-known/relayquay
+		handle @health {
+			respond "relayquay ok" 200
+		}
+
+		@id path /ws/id /ws/id/*
+		handle @id {
+			reverse_proxy {$RUSTDESK_HBBS_WS_UPSTREAM:127.0.0.1:21118} {
+				header_up Host {host}
+				header_up X-Real-IP {remote_host}
+				header_up X-Forwarded-For {remote_host}
+				header_up X-Forwarded-Proto https
+			}
+		}
+
+		@relay path /ws/relay /ws/relay/*
+		handle @relay {
+			reverse_proxy {$RUSTDESK_HBBR_WS_UPSTREAM:127.0.0.1:21119} {
+				header_up Host {host}
+				header_up X-Real-IP {remote_host}
+				header_up X-Forwarded-For {remote_host}
+				header_up X-Forwarded-Proto https
+			}
+		}
+
+		handle {
+			root * /srv/rustdesk-web
+			file_server
 		}
 	}
 
-	@relay path /ws/relay /ws/relay/*
-	handle @relay {
-		reverse_proxy {$RUSTDESK_HBBR_WS_UPSTREAM:127.0.0.1:21119} {
-			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto https
-		}
-	}
-
-	handle {
-		root * /srv/rustdesk-web
-		file_server
-	}
+	respond "not found" 404
 }

@@ -206,8 +206,11 @@ the web client at the hostname root.
 
 ## Security Defaults
 
-- No Cloudflare token is committed.
+- No Cloudflare token is committed, and the runtime token reaches cloudflared
+  only as an environment variable; `relayquay config` redacts it.
 - No real hostname is committed.
+- In rustdesk mode the gateway serves only `RELAYQUAY_PUBLIC_HOST` requests
+  that carry the Cloudflare Access `Cf-Access-Jwt-Assertion` header.
 - Optional web-client assets are private operator-supplied files.
 - The gateway binds to `127.0.0.1:8788`.
 - RustOpViewer/private app upstreams should bind to loopback too.

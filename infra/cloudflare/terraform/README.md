@@ -33,13 +33,20 @@ terraform apply
 If you already created resources manually, import them before applying. Applying
 without imports can create duplicates or overwrite provider-managed settings.
 
-For cover-only deployments, leave `access_application_domain` empty. Do not
-point a Cloudflare Access application at the public cover hostname, because
-anonymous requests to `/` will reveal the Cloudflare Access login endpoint
-before the request can reach the cover response.
+Set `gateway_mode` to the mode RelayQuay runs in; `terraform plan` fails when
+the hostnames do not fit that mode:
 
-For private HTTP app mode, set `access_application_domain` to the same hostname
-as `RELAYQUAY_APP_HOST`. Keep `public_hostname` as the cover hostname.
+- `rustdesk` (default): set `access_application_domain = public_hostname`. The
+  tunnel routes that one hostname to the origin and Access protects it, which
+  is what the rustdesk Caddyfile expects (it only serves requests for
+  `RELAYQUAY_PUBLIC_HOST` that carry the `Cf-Access-Jwt-Assertion` header).
+- `app`: set `access_application_domain` to the same hostname as
+  `RELAYQUAY_APP_HOST` and keep `public_hostname` as the cover hostname.
+- `cover`: leave `access_application_domain` empty.
+
+Do not point a Cloudflare Access application at a public cover hostname,
+because anonymous requests to `/` will reveal the Cloudflare Access login
+endpoint before the request can reach the cover response.
 
 ## Required Cloudflare Permissions
 

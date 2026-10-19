@@ -436,7 +436,8 @@ case "$cmd" in
     ;;
   config)
     load_env
-    compose config
+    # The rendered config carries the tunnel token as TUNNEL_TOKEN; never print it.
+    compose config | sed -E 's/^([[:space:]]*TUNNEL_TOKEN:).*/\1 <redacted>/'
     ;;
   key)
     cmd_key

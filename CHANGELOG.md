@@ -4,6 +4,15 @@ All notable changes to RelayQuay are recorded here.
 
 ## Unreleased
 
+- Fixed the rustdesk-mode Caddyfiles: they now bind to `RELAYQUAY_BIND` (they
+  listened on all interfaces and only answered `Host: 127.0.0.1`), the catch-all
+  `404` no longer shadows the WebSocket proxies, and they serve only
+  `RELAYQUAY_PUBLIC_HOST` requests carrying `Cf-Access-Jwt-Assertion`.
+- Terraform: added `gateway_mode`; the plan fails unless Cloudflare Access
+  matches the mode (rustdesk: on `public_hostname`; app: separate hostname;
+  cover: none).
+- The tunnel token is passed to cloudflared as `TUNNEL_TOKEN` instead of
+  `--token`, and `relayquay config` redacts it.
 - Restored RustOpViewer as a first-class, fail-closed profile with legacy env
   migration, protected health checks, loopback exposure diagnostics, and
   dedicated security and operations guidance.
